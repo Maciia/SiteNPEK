@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Расписание | 2 Семестр 2025/2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="background-globes" style="display: none;"></div>
+
+    <main class="container">
+        <header class="header">
+            <h1 class="title">Расписание <span class="highlight">2026</span></h1>
+            <p class="subtitle">2 семестр • 2025/2026 уч.год</p>
+        </header>
+
+        <div class="status-panel">
+            <div class="status-header">
+                <div id="status-title">Загрузка...</div>
+                <div id="real-time" class="real-time">--:--</div>
+            </div>
+            <div class="timer-container">
+                <div id="countdown-timer" class="countdown-timer">--:--</div>
+                <div id="status-message" class="status-message">Ожидание...</div>
+            </div>
+            <div class="progress-bar-container">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
+
+        <div id="schedule-grid" class="schedule-grid">
+            <!-- Schedule cards will be injected here by JS -->
+        </div>
+
+        <div class="mobile-nav">
+            <button id="prev-day" class="nav-btn">←</button>
+            <span id="current-day-label" class="nav-label">Понедельник</span>
+            <button id="next-day" class="nav-btn">→</button>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
