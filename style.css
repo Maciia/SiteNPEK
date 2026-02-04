@@ -43,7 +43,6 @@ body {
     margin-bottom: 10px;
     flex-shrink: 0;
     min-height: 50px;
-    /* Allow growth */
 }
 
 .header-left {
@@ -94,14 +93,8 @@ body {
 }
 
 /* Hide unused */
-.header {
-    display: none;
-}
-
-.status-panel {
-    display: none;
-}
-
+.header,
+.status-panel,
 .progress-bar-container {
     display: none;
 }
@@ -264,32 +257,33 @@ body {
     font-size: 1.1rem;
 }
 
-/* Responsive Adjustments */
+/* --- Mobile Specific Overrides --- */
 @media (max-width: 768px) {
     .container {
         padding: 5px;
-        /* Allow body to scroll if needed or keep hidden? 
-           User wants "fit", let's keep container hidden but card scrollable 
-        */
     }
 
-    /* Top Bar: Stacked */
+    /* Force Top Bar to stack */
     .top-bar {
+        display: flex;
+        flex-direction: column !important;
+        /* Force stack */
+        align-items: center !important;
+        gap: 10px;
         height: auto;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 8px;
-        padding: 8px 12px;
+        padding: 10px;
     }
 
     .header-left {
+        width: 100%;
         justify-content: center;
+        margin-bottom: 5px;
     }
 
     .status-right {
-        justify-content: space-between;
         width: 100%;
-        gap: 10px;
+        justify-content: center;
+        gap: 15px;
     }
 
     /* Grid */
@@ -310,21 +304,49 @@ body {
         display: flex;
     }
 
-    /* Items */
+    /* Lesson Items: Stack Content vertically on strict mobile */
     .lesson-item {
-        padding: 8px;
-        gap: 8px;
+        flex-direction: column;
+        /* Stack vertically! */
+        align-items: flex-start;
+        height: auto;
+        /* Allow growth */
+        padding: 10px;
+        gap: 5px;
     }
 
+    /* Number stays at top left essentially via flex, wait.
+       If column, number is row 1.
+       Let's change: keep Row but wrap content.
+    */
+    .lesson-item {
+        flex-direction: row;
+        flex-wrap: wrap;
+        /* WRAP */
+    }
+
+    .lesson-number {
+        margin-right: 5px;
+    }
+
+    .lesson-content {
+        flex-basis: 70%;
+        /* Take most width */
+    }
+
+    /* Force Time column to break to new line */
+    .lesson-time-col {
+        flex-basis: 100%;
+        text-align: left;
+        /* Align left when stacked */
+        margin-top: 5px;
+        padding-left: 35px;
+        /* Indent to match text */
+        color: #aaa;
+    }
+
+    /* Ensure text doesn't flow off */
     .lesson-subject {
         white-space: normal;
-        /* Wrap text */
-        line-height: 1.2;
-    }
-
-    .lesson-time-col {
-        /* Ensure it doesn't get squashed or pushed off */
-        max-width: 100px;
-        font-size: 0.75rem;
     }
 }
