@@ -1,7 +1,7 @@
 :root {
     --bg-dark: #050505;
-    --card-bg: #141414;
-    --card-border: #333;
+    --card-bg: rgba(20, 20, 20, 0.72);
+    --card-border: rgba(80, 80, 80, 0.4);
     --text-primary: #fff;
     --text-secondary: #999;
 }
@@ -55,8 +55,10 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background: #111;
-    border: 1px solid #333;
+    background: rgba(17, 17, 17, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(80, 80, 80, 0.3);
     padding: 8px 16px;
     border-radius: 8px;
     margin-bottom: 10px;
@@ -176,6 +178,8 @@ body {
 /* Cards */
 .day-card {
     background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid var(--card-border);
     border-radius: 8px;
     padding: 10px;
@@ -851,7 +855,10 @@ body.theme-newyear-body {
 
     #hero-quote {
         font-size: 0.7rem !important;
-        max-width: 45vw;
+        max-width: 100% !important; /* Full width forces it onto its own line */
+        width: 100%;
+        order: 1; /* Always comes last after Числитель */
+        white-space: normal !important; /* Allow wrapping for long quotes */
     }
 
 }
