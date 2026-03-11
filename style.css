@@ -549,6 +549,8 @@ body.theme-newyear-body {
 .schedule-wrapper {
     display: flex;
     flex-direction: column;
+    flex-grow: 1;   /* fill remaining space in .container */
+    min-height: 0;  /* prevent overflow */
     gap: 0;
 }
 

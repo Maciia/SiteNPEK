@@ -364,8 +364,28 @@ window.addGlobalNote = function() {
 }
 
 window.saveGlobalNotes = async function() {
+    // Auto-add any pending text from textarea before publishing
+    const pendingText = document.getElementById('gn-text')?.value.trim();
+    const pendingSubj = document.getElementById('gn-subject')?.value;
+    const pendingDay  = document.getElementById('gn-day')?.value;
+    if (pendingText) {
+        const targetDate = findNextLessonDate(pendingSubj, pendingDay);
+        if (targetDate) {
+            window.globalNotes.push({ subject: pendingSubj, targetDate, text: pendingText });
+            document.getElementById('gn-text').value = '';
+        } else {
+            alert('Не найдена дата для «' + pendingSubj + '». Выберите другой предмет или день.');
+            return;
+        }
+    }
+
+    if (window.globalNotes.length === 0) {
+        alert('Список заметок пустой! Добавьте хотя бы одну заметку.');
+        return;
+    }
+
     const token = document.getElementById('gn-token').value.trim();
-    const repoInput = document.getElementById('gn-repo').value.trim(); // owner/repo
+    const repoInput = document.getElementById('gn-repo').value.trim();
     if (!token || !repoInput) { alert('Введите GitHub токен и репозиторий!'); return; }
 
     // Save token and repo for next time
@@ -374,6 +394,7 @@ window.saveGlobalNotes = async function() {
 
     const content = JSON.stringify({ notes: window.globalNotes }, null, 2);
     const encoded = btoa(unescape(encodeURIComponent(content)));
+
 
     try {
         // First get the current SHA of the file (needed for update)
