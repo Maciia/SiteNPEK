@@ -1,1 +1,24 @@
-{ "notes": [] }
+{
+  "notes": [
+    {
+      "subject": "Классный час",
+      "targetDate": "16.03",
+      "text": "Хай"
+    },
+    {
+      "subject": "Классный час",
+      "targetDate": "16.03",
+      "text": "привет"
+    },
+    {
+      "subject": "Классный час",
+      "targetDate": "16.03",
+      "text": "1"
+    },
+    {
+      "subject": "Классный час",
+      "targetDate": "16.03",
+      "text": "1"
+    }
+  ]
+}
