@@ -851,14 +851,30 @@ body.theme-newyear-body {
     .header-left {
         flex-wrap: wrap;
         gap: 5px 8px;
+        justify-content: center; /* center title row on mobile */
     }
 
     #hero-quote {
         font-size: 0.7rem !important;
-        max-width: 100% !important; /* Full width forces it onto its own line */
+        max-width: 100% !important;
         width: 100%;
-        order: 1; /* Always comes last after Числитель */
-        white-space: normal !important; /* Allow wrapping for long quotes */
+        order: 1;
+        white-space: normal !important;
+        text-align: center; /* center quote text */
+        color: #666 !important;
+    }
+
+    /* --- GLASSMORPHISM on mobile (force re-apply for Safari) --- */
+    .top-bar-container {
+        background: rgba(17, 17, 17, 0.7) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        backdrop-filter: blur(12px) !important;
+    }
+
+    .day-card {
+        background: rgba(20, 20, 20, 0.75) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        backdrop-filter: blur(10px) !important;
     }
 
 }

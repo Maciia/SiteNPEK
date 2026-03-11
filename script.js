@@ -24,11 +24,11 @@ let scheduleData = [
     {
         day: "Понедельник",
         lessons: [
-            { id: 0, time: "8.30 – 8.55", subject: "Классный час", teacher: "", room: "", week: "both" },
-            { id: 1, time: "9.00 – 10.30", subject: "Физ-ра", teacher: "Матвей Андреевич", room: "т.з.", week: "both" },
-            { id: 2, time: "10.40 – 12.10", subject: "Физика", teacher: "Александр Алексеевич", room: "41", week: "both" },
+            { id: 0, time: "8:30 – 8:55", subject: "Классный час", teacher: "", room: "", week: "both" },
+            { id: 1, time: "9:00 – 10:30", subject: "Физ-ра", teacher: "Матвей Андреевич", room: "т.з.", week: "both" },
+            { id: 2, time: "10:40 – 12:10", subject: "Физика", teacher: "Александр Алексеевич", room: "41", week: "both" },
             // Based on image: Ин. язык (Гурджиева 45а / Воронович 55а) is 3rd lesson.
-            { id: 3, time: "12.40 – 14.10", subject: "Ин. язык", teacher: "Замира Шамсадинова", room: "45а", week: "both", isGroup: true, secondTeacher: "Воронович", secondRoom: "55а" },
+            { id: 3, time: "12:40 – 14:10", subject: "Ин. язык", teacher: "Замира Шамсадинова", room: "45а", week: "both", isGroup: true, secondTeacher: "Воронович", secondRoom: "55а" },
             // Also adding 4th and 5th lesson times from the bell schedule so timer works if they existed
             // { id: 4, time: "15.00 – 16.30", subject: "", teacher: "", room: "", week: "both" },
             // { id: 5, time: "16.40 – 18.10", subject: "", teacher: "", room: "", week: "both" }
@@ -37,43 +37,43 @@ let scheduleData = [
     {
         day: "Вторник",
         lessons: [
-            { id: 1, time: "8.30 – 10.00", subject: "Матем.", teacher: "Елена Александровна", room: "42", week: "both" },
-            { id: 2, time: "10.15 – 11.45", subject: "Русс.яз", teacher: "Наталья Анатольевна", room: "47", week: "both" },
-            { id: 3, time: "12.20 – 13.50", subject: "Лит-ра", teacher: "Наталья Анатольевна", room: "47", week: "both" }
+            { id: 1, time: "8:30 – 10:00", subject: "Матем.", teacher: "Елена Александровна", room: "42", week: "both" },
+            { id: 2, time: "10:15 – 11:45", subject: "Русс.яз", teacher: "Наталья Анатольевна", room: "47", week: "both" },
+            { id: 3, time: "12:20 – 13:50", subject: "Лит-ра", teacher: "Наталья Анатольевна", room: "47", week: "both" }
         ]
     },
     {
         day: "Среда",
         lessons: [
-            { id: 1, time: "8.30 – 10.00", subject: "История", teacher: "Марина Геннадьевна", room: "49", week: "both" },
-            { id: 2, time: "10.15 – 11.45", subject: "Инф-ка", teacher: "Максим Сергеевич", room: "48", week: "both" },
-            { id: 3, time: "12.20 – 13.50", subject: "Физика", teacher: "Александр Алексеевич", room: "41", week: "both" }
+            { id: 1, time: "8:30 – 10:00", subject: "История", teacher: "Марина Геннадьевна", room: "49", week: "both" },
+            { id: 2, time: "10:15 – 11:45", subject: "Инф-ка", teacher: "Максим Сергеевич", room: "48", week: "both" },
+            { id: 3, time: "12:20 – 13:50", subject: "Физика", teacher: "Александр Алексеевич", room: "41", week: "both" }
         ]
     },
     {
         day: "Четверг",
         lessons: [
-            { id: 1, time: "8.30 – 10.00", subject: "Биология", teacher: "Печуркина", room: "45", week: "num" },
-            { id: 1, time: "8.30 – 10.00", subject: "Литер.", teacher: "Наталья Анатольевна", room: "47", week: "den" },
-            { id: 2, time: "10.15 – 11.45", subject: "Матем.", teacher: "Елена Александровна", room: "42", week: "both" },
-            { id: 3, time: "12.20 – 13.50", subject: "История", teacher: "Марина Геннадьевна", room: "49", week: "num" },
-            { id: 3, time: "12.20 – 13.50", subject: "География", teacher: "Татьяна Викторовна", room: "42а", week: "den" },
-            { id: 4, time: "14.00 – 15.30", subject: "Инф-ка", teacher: "Максим Сергеевич", room: "48", week: "both" }
+            { id: 1, time: "8:30 – 10:00", subject: "Биология", teacher: "Печуркина", room: "45", week: "num" },
+            { id: 1, time: "8:30 – 10:00", subject: "Литер.", teacher: "Наталья Анатольевна", room: "47", week: "den" },
+            { id: 2, time: "10:15 – 11:45", subject: "Матем.", teacher: "Елена Александровна", room: "42", week: "both" },
+            { id: 3, time: "12:20 – 13:50", subject: "История", teacher: "Марина Геннадьевна", room: "49", week: "num" },
+            { id: 3, time: "12:20 – 13:50", subject: "География", teacher: "Татьяна Викторовна", room: "42а", week: "den" },
+            { id: 4, time: "14:00 – 15:30", subject: "Инф-ка", teacher: "Максим Сергеевич", room: "48", week: "both" }
         ]
     },
     {
         day: "Пятница",
         lessons: [
-            { id: 1, time: "8.30 – 10.00", subject: "Физ-ра", teacher: "Матвей Андреевич", room: "с.з.", week: "den" },
-            { id: 2, time: "10.15 – 11.45", subject: "ОБЗР", teacher: "Олег Геннадьевич", room: "32", week: "both" },
-            { id: 3, time: "12.20 – 13.50", subject: "Инф-ка", teacher: "Максим Сергеевич", room: "48", week: "both" }
+            { id: 1, time: "8:30 – 10:00", subject: "Физ-ра", teacher: "Матвей Андреевич", room: "с.з.", week: "den" },
+            { id: 2, time: "10:15 – 11:45", subject: "ОБЗР", teacher: "Олег Геннадьевич", room: "32", week: "both" },
+            { id: 3, time: "12:20 – 13:50", subject: "Инф-ка", teacher: "Максим Сергеевич", room: "48", week: "both" }
         ]
     },
     {
         day: "Суббота",
         lessons: [
-            { id: 1, time: "8.30 – 10.00", subject: "Матем.", teacher: "Елена Александровна", room: "42", week: "both" },
-            { id: 2, time: "10.15 – 11.45", subject: "Химия", teacher: "Головлева", room: "51", week: "both" }
+            { id: 1, time: "8:30 – 10:00", subject: "Матем.", teacher: "Елена Александровна", room: "42", week: "both" },
+            { id: 2, time: "10:15 – 11:45", subject: "Химия", teacher: "Головлева", room: "51", week: "both" }
         ]
     }
 ];
@@ -876,10 +876,10 @@ window.resetWeek = function () {
 
 // ======================== ANIMATED BACKGROUND ========================
 window.userPhrases = [
-    "Исаев лох", "Кабачки растут на пальмах", "Прянички вкусно", 
-    "У стен есть не только уши", "Грызть писюльки", "Олег дрова +79138557813", 
-    "Киррил", "СЕРЕГА ИСКИТИМ", "У тебя есть подмышки?", 
-    "Если у меня одна бровь меня депортируют?", "Уфф какие цыпочки в нашем санатории", 
+    "Исаев лох", "Кабачки растут на пальмах", "Прянички вкусно",
+    "У стен есть не только уши", "Грызть писюльки", "Олег дрова +79138557813",
+    "Киррил", "СЕРЕГА ИСКИТИМ", "У тебя есть подмышки?",
+    "Если у меня одна бровь меня депортируют?", "Уфф какие цыпочки в нашем санатории",
     "Жирафы - бессердечные создания", "продам гараж"
 ];
 
@@ -890,8 +890,8 @@ function initAnimatedBackground() {
     // The repeated background string requested by the user
     // We apply strong padding to separate words
     const repeatedString = "НПЭК&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".repeat(150);
-    
-    const numRows = 35; // Amount of text lines for high density
+
+    const numRows = 99; // Amount of text lines for high density
     let html = '';
 
     for (let i = 0; i < numRows; i++) {
@@ -1129,7 +1129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroQuoteEl = document.getElementById('hero-quote');
     if (heroQuoteEl && window.userPhrases && window.userPhrases.length > 0) {
         let quoteIdx = 0;
-        
+
         // Shuffle quotes initially
         const shuffle = (arr) => {
             let s = [...arr];
@@ -1149,7 +1149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 quoteIdx = (quoteIdx + 1) % quotesList.length;
             }, 500); // Match CSS transition duration
         };
-        
+
         setTimeout(updateQuote, 100);
         setInterval(updateQuote, 3000); // Switch every 3 seconds
     }
