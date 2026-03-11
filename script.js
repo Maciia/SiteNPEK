@@ -53,7 +53,7 @@ const scheduleData = [
     {
         day: "Четверг",
         lessons: [
-            { id: 1, time: "8.30 – 10.00", subject: "Обществознание", teacher: "Тимур Беджанович", room: "45", week: "num" }, // Replaced "Биолог." based on context of not having Biology
+            { id: 1, time: "8.30 – 10.00", subject: "Биология", teacher: "", room: "", week: "num" },
             { id: 1, time: "8.30 – 10.00", subject: "Литер.", teacher: "Наталья Анатольевна", room: "47", week: "den" },
             { id: 2, time: "10.15 – 11.45", subject: "Матем.", teacher: "Елена Александровна", room: "42", week: "both" },
             { id: 3, time: "12.20 – 13.50", subject: "История", teacher: "Марина Геннадьевна", room: "49", week: "num" },
@@ -377,11 +377,6 @@ window.saveGlobalNotes = async function() {
             alert('Не найдена дата для «' + pendingSubj + '». Выберите другой предмет или день.');
             return;
         }
-    }
-
-    if (window.globalNotes.length === 0) {
-        alert('Список заметок пустой! Добавьте хотя бы одну заметку.');
-        return;
     }
 
     const token = document.getElementById('gn-token').value.trim();
