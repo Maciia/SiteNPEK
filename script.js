@@ -20,7 +20,7 @@ function getWeekType() {
     return (weeksPassed % 2 === 0) ? 'num' : 'den';
 }
 
-const scheduleData = [
+let scheduleData = [
     {
         day: "Понедельник",
         lessons: [
@@ -53,7 +53,7 @@ const scheduleData = [
     {
         day: "Четверг",
         lessons: [
-            { id: 1, time: "8.30 – 10.00", subject: "Биология", teacher: "", room: "", week: "num" },
+            { id: 1, time: "8.30 – 10.00", subject: "Биология", teacher: "Печуркина", room: "45", week: "num" },
             { id: 1, time: "8.30 – 10.00", subject: "Литер.", teacher: "Наталья Анатольевна", room: "47", week: "den" },
             { id: 2, time: "10.15 – 11.45", subject: "Матем.", teacher: "Елена Александровна", room: "42", week: "both" },
             { id: 3, time: "12.20 – 13.50", subject: "История", teacher: "Марина Геннадьевна", room: "49", week: "num" },
@@ -268,7 +268,7 @@ window.toggleHiddenTasks = function () {
 
 // ===================== ADMIN / GLOBAL NOTES =====================
 const ADMIN_SECRET = 'robloxadmin777';
-const DEFAULT_REPO  = 'Maciia/SiteNPEK';
+const DEFAULT_REPO = 'Maciia/SiteNPEK';
 
 function isAdmin() {
     return localStorage.getItem('npek_admin') === '1';
@@ -293,7 +293,7 @@ async function loadGlobalNotes() {
             const parsed = JSON.parse(cached);
             if (Array.isArray(parsed)) window.globalNotes = parsed;
         }
-    } catch (e) {}
+    } catch (e) { }
     renderSchedule();
 
     // 2. Then try to fetch fresh from file (GitHub Pages)
@@ -312,17 +312,44 @@ async function loadGlobalNotes() {
     } catch (e) { /* offline or local file — use cached */ }
 }
 
+async function loadGlobalSchedule() {
+    // 1. Try localStorage
+    try {
+        const cached = localStorage.getItem('npek_global_schedule');
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length === 6) {
+                scheduleData = parsed;
+                renderSchedule();
+            }
+        }
+    } catch (e) { }
+
+    // 2. Fetch fresh
+    try {
+        const resp = await fetch('globalSchedule.json?t=' + Date.now());
+        if (resp.ok) {
+            const data = await resp.json();
+            if (Array.isArray(data.schedule) && data.schedule.length === 6) {
+                scheduleData = data.schedule;
+                localStorage.setItem('npek_global_schedule', JSON.stringify(scheduleData));
+                renderSchedule();
+            }
+        }
+    } catch (e) { }
+}
+
 function getGlobalNotesForLesson(subject, dateStr) {
     return window.globalNotes.filter(n => n.subject === subject && n.targetDate === dateStr);
 }
 
 // ---- Admin Panel UI ----
-window.openGlobalAdminPanel = function() {
+window.openGlobalAdminPanel = function () {
     document.getElementById('global-admin-modal').classList.add('active');
     renderGlobalNotesList();
 }
 
-window.closeGlobalAdminPanel = function() {
+window.closeGlobalAdminPanel = function () {
     document.getElementById('global-admin-modal').classList.remove('active');
 }
 
@@ -342,17 +369,17 @@ function renderGlobalNotesList() {
     `).join('');
 }
 
-window.deleteGlobalNote = function(idx) {
+window.deleteGlobalNote = function (idx) {
     window.globalNotes.splice(idx, 1);
     saveGlobalNotesCache();
     renderGlobalNotesList();
     renderSchedule();
 }
 
-window.addGlobalNote = function() {
-    const text  = document.getElementById('gn-text').value.trim();
-    const subj  = document.getElementById('gn-subject').value;
-    const day   = document.getElementById('gn-day').value;
+window.addGlobalNote = function () {
+    const text = document.getElementById('gn-text').value.trim();
+    const subj = document.getElementById('gn-subject').value;
+    const day = document.getElementById('gn-day').value;
     if (!text) { alert('Введите текст заметки!'); return; }
     const targetDate = findNextLessonDate(subj, day);
     if (!targetDate) { alert('Предмет не найден в расписании!'); return; }
@@ -363,11 +390,11 @@ window.addGlobalNote = function() {
     renderSchedule(); // Show note immediately under the lesson
 }
 
-window.saveGlobalNotes = async function() {
+window.saveGlobalNotes = async function () {
     // Auto-add any pending text from textarea before publishing
     const pendingText = document.getElementById('gn-text')?.value.trim();
     const pendingSubj = document.getElementById('gn-subject')?.value;
-    const pendingDay  = document.getElementById('gn-day')?.value;
+    const pendingDay = document.getElementById('gn-day')?.value;
     if (pendingText) {
         const targetDate = findNextLessonDate(pendingSubj, pendingDay);
         if (targetDate) {
@@ -422,6 +449,43 @@ window.saveGlobalNotes = async function() {
     }
 }
 // ================================================================
+
+// Fetch Weather for Novosibirsk (Titova 14)
+async function fetchWeather() {
+    const weatherWidget = document.getElementById('weather-widget');
+    if (!weatherWidget) return;
+
+    try {
+        // Coordinates for Novosibirsk, Titova 14
+        const lat = 54.9818;
+        const lon = 82.8839;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FNovosibirsk`;
+
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('Network error');
+        const data = await resp.json();
+
+        // Tomorrow's data (index 1)
+        const tMax = Math.round(data.daily.temperature_2m_max[1]);
+        const wCode = data.daily.weathercode[1];
+
+        // Map WMO codes to simple emojis
+        let emoji = '🌤';
+        if (wCode === 0) emoji = '☀️'; // Clear
+        else if (wCode === 1 || wCode === 2) emoji = '🌤'; // Partly cloudy
+        else if (wCode === 3) emoji = '☁️'; // Overcast
+        else if (wCode >= 51 && wCode <= 67) emoji = '🌧'; // Rain
+        else if (wCode >= 71 && wCode <= 86) emoji = '❄️'; // Snow
+        else if (wCode >= 95) emoji = '⛈'; // Thunderstorm
+
+        weatherWidget.innerHTML = `
+            <div style="font-size: 1.1rem; color: #fff;">${emoji} Завтра: ${tMax > 0 ? '+' : ''}${tMax}°C</div>
+            <div style="font-size: 0.75rem; color: #888;">ул. Титова, 14</div>
+        `;
+    } catch (e) {
+        weatherWidget.innerHTML = `<span style="color:#aaa">Погода недоступна</span>`;
+    }
+}
 
 function renderLessonTasks(subject, dateStr) {
     let tasks = getTasks().filter(t => t.subject === subject && t.targetDate === dateStr);
@@ -810,6 +874,35 @@ window.resetWeek = function () {
     updateState();
 }
 
+// ======================== ANIMATED BACKGROUND ========================
+window.userPhrases = [
+    "Исаев лох", "Кабачки растут на пальмах", "Прянички вкусно", 
+    "У стен есть не только уши", "Грызть писюльки", "Олег дрова +79138557813", 
+    "Киррил", "СЕРЕГА ИСКИТИМ", "У тебя есть подмышки?", 
+    "Если у меня одна бровь меня депортируют?", "Уфф какие цыпочки в нашем санатории", 
+    "Жирафы - бессердечные создания", "продам гараж"
+];
+
+function initAnimatedBackground() {
+    const bgContainer = document.getElementById('animated-bg');
+    if (!bgContainer) return;
+
+    // The repeated background string requested by the user
+    // We apply strong padding to separate words
+    const repeatedString = "НПЭК&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".repeat(150);
+    
+    const numRows = 35; // Amount of text lines for high density
+    let html = '';
+
+    for (let i = 0; i < numRows; i++) {
+        // Alternate scroll direction for every row
+        const dirClass = (i % 2 === 0) ? 'scroll-left' : 'scroll-right';
+        html += `<div class="bg-text-line ${dirClass}">${repeatedString}</div>`;
+    }
+
+    bgContainer.innerHTML = html;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Quick Fix: Rewrite HTML structure for top bar
     const statusPanel = document.querySelector('.status-panel');
@@ -822,8 +915,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="header-left">
                     <h1 class="title">Расписание</h1>
                     <div class="week-info" id="week-info-label"></div>
+                    <span id="hero-quote" style="font-size: 0.78rem; color: #555; font-style: italic; transition: opacity 0.5s ease; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 0;"></span>
                 </div>
                 <div class="status-right">
+                    <div id="weather-widget" class="weather-widget" title="Погода на завтра (Новосибирск, ул. Титова, 14)">
+                        🌦 Загрузка погоды...
+                    </div>
                     <div class="timer-container">
                         <span id="countdown-timer" class="countdown-timer">--:--</span>
                     </div>
@@ -914,6 +1011,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             </div>
+
+            <!-- Global Schedule Admin Modal -->
+            <div id="schedule-admin-modal" class="modal-overlay">
+                <div class="modal-box" style="max-width:600px; width:95%">
+                    <div class="modal-title">✏️ Редактор Расписания</div>
+                    
+                    <div class="form-group" style="margin-bottom: 12px">
+                        <label>Выберите день для редактирования:</label>
+                        <select id="sa-day-select" class="form-input" onchange="window.renderScheduleAdminList()"></select>
+                    </div>
+
+                    <div id="schedule-admin-list" style="margin-bottom:12px; max-height:300px; overflow-y:auto; border: 1px solid #333; padding: 5px; border-radius: 4px;">
+                        <!-- Populate with lessons for selected day -->
+                    </div>
+                    
+                    <div style="margin-bottom:10px">
+                        <button class="btn btn-primary" style="width:100%" onclick="window.addScheduleAdminRow()">+ Добавить пустую пару</button>
+                    </div>
+
+                    <hr style="border-color:#333;margin:10px 0">
+                    <p style="font-size:0.8rem; color:#888; margin-bottom: 8px;">Изменения применяются ко всем пользователям. Не забудьте указать токен в панели "Глоб. заметка" если он не сохранен.</p>
+                    <div class="modal-actions">
+                        <button class="btn btn-cancel" onclick="window.closeScheduleAdminPanel()">Отмена</button>
+                        <button class="btn btn-primary" onclick="window.saveGlobalSchedule()">💾 Опубликовать Расписание</button>
+                    </div>
+                </div>
+            </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalsHtml);
 
@@ -927,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (label) {
                 let text = getWeekType() === 'den' ? 'Знаменатель' : 'Числитель';
                 if (weekOffset !== 0) {
-                    text += ` (Сдвиг: ${weekOffset > 0 ? '+' : ''}${weekOffset} нед.)`;
+                    text += ` (${weekOffset > 0 ? '+' : ''}${weekOffset} нед.)`;
                 }
                 label.textContent = text;
             }
@@ -943,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hiddenBtn.style.marginLeft = '10px';
                 hiddenBtn.style.background = 'transparent';
                 hiddenBtn.style.borderColor = '#444';
-                hiddenBtn.onclick = function() { window.toggleHiddenTasks(); };
+                hiddenBtn.onclick = function () { window.toggleHiddenTasks(); };
 
                 const navControls = document.querySelector('.nav-controls');
                 if (navControls) navControls.appendChild(hiddenBtn);
@@ -960,20 +1084,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ----- Admin button helper -----
-    window.showAdminButton = function() {
+    window.showAdminButton = function () {
         let adminBtn = document.getElementById('global-admin-btn');
         if (!adminBtn) {
             adminBtn = document.createElement('button');
             adminBtn.id = 'global-admin-btn';
             adminBtn.className = 'week-btn';
             adminBtn.textContent = '📌 Глоб. заметка';
-            adminBtn.onclick = function() {
+            adminBtn.onclick = function () {
                 // Populate subject and day selects in admin panel
                 const gnSubj = document.getElementById('gn-subject');
-                const gnDay  = document.getElementById('gn-day');
+                const gnDay = document.getElementById('gn-day');
                 if (gnSubj && !gnSubj.options.length) {
                     const subjects = new Set();
-                    scheduleData.forEach(d => d.lessons.forEach(l => { if(l.subject) subjects.add(l.subject); }));
+                    scheduleData.forEach(d => d.lessons.forEach(l => { if (l.subject) subjects.add(l.subject); }));
                     gnSubj.innerHTML = Array.from(subjects).map(s => `<option value="${s}">${s}</option>`).join('');
                 }
                 if (gnDay && !gnDay.options.length) {
@@ -982,19 +1106,53 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 // Restore saved token/repo
                 const savedToken = localStorage.getItem('npek_gh_token');
-                const savedRepo  = localStorage.getItem('npek_gh_repo') || DEFAULT_REPO;
+                const savedRepo = localStorage.getItem('npek_gh_repo') || DEFAULT_REPO;
                 if (savedToken) document.getElementById('gn-token').value = savedToken;
                 document.getElementById('gn-repo').value = savedRepo;
                 window.openGlobalAdminPanel();
             };
             const navControls = document.querySelector('.nav-controls');
-            if (navControls) navControls.appendChild(adminBtn);
+            if (navControls) {
+                navControls.appendChild(adminBtn);
+            }
         }
         adminBtn.style.display = 'inline-block';
     };
 
     renderSchedule();
     loadGlobalNotes(); // Fetch and render global notes from JSON file
+    loadGlobalSchedule(); // Fetch global schedule from JSON file
+    fetchWeather(); // Load weather for tomorrow
+    initAnimatedBackground(); // Generate diagonal scrolling background
+
+    // Setup hero quote rotation
+    const heroQuoteEl = document.getElementById('hero-quote');
+    if (heroQuoteEl && window.userPhrases && window.userPhrases.length > 0) {
+        let quoteIdx = 0;
+        
+        // Shuffle quotes initially
+        const shuffle = (arr) => {
+            let s = [...arr];
+            for (let i = s.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [s[i], s[j]] = [s[j], s[i]];
+            }
+            return s;
+        };
+        const quotesList = shuffle(window.userPhrases);
+
+        const updateQuote = () => {
+            heroQuoteEl.style.opacity = 0;
+            setTimeout(() => {
+                heroQuoteEl.textContent = '"' + quotesList[quoteIdx] + '"';
+                heroQuoteEl.style.opacity = 1;
+                quoteIdx = (quoteIdx + 1) % quotesList.length;
+            }, 500); // Match CSS transition duration
+        };
+        
+        setTimeout(updateQuote, 100);
+        setInterval(updateQuote, 3000); // Switch every 3 seconds
+    }
 
     // Show admin button if already unlocked
     if (isAdmin()) window.showAdminButton();
@@ -1019,7 +1177,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Only trigger swipe if horizontal movement > 50px and NOT mostly vertical
             if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
                 if (dx < 0) switchMobileDay(1);  // swipe left → next day
-                else        switchMobileDay(-1); // swipe right → prev day
+                else switchMobileDay(-1); // swipe right → prev day
             }
         }, { passive: true });
     }

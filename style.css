@@ -16,19 +16,39 @@ body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-dark);
     color: var(--text-primary);
-    height: 100vh;
-    font-size: 14px;
-    overflow: hidden;
+    min-height: 100vh;
+    overflow-x: hidden;
     line-height: 1.4;
 }
 
 .container {
     max-width: 1024px;
-    height: 100%;
+    height: 100vh;
     margin: 0 auto;
     padding: 10px;
     display: flex;
     flex-direction: column;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.weather-widget {
+    font-size: 0.9rem;
+    color: #ffd700;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .top-bar-container {
@@ -89,8 +109,11 @@ body {
 
 .header-left {
     display: flex;
+    flex-direction: row;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .title {
@@ -135,7 +158,6 @@ body {
 }
 
 /* Hide unused */
-.header,
 .status-panel,
 .progress-bar-container {
     display: none;
@@ -222,7 +244,7 @@ body {
     border-radius: 6px;
     padding: 8px 10px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     min-height: 50px;
 }
@@ -258,8 +280,8 @@ body {
     font-size: 0.8rem;
     color: #777;
     display: flex;
-    flex-wrap: wrap; /* Allows Teacher and Room to stack gracefully on PC if too long */
-    gap: 6px;
+    flex-direction: column; /* Force Teacher and Room to always stack on separate lines */
+    gap: 2px;
 }
 
 .lesson-time-col {
@@ -582,10 +604,62 @@ body.theme-newyear-body {
     font-size: 1.1rem;
 }
 
+/* --- Animated Text Background --- */
+.animated-bg {
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200vw;
+    height: 200vh;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    transform: rotate(-15deg); /* Angle of diagonal scroll */
+    user-select: none;
+    opacity: 0.15; /* Subtle background opacity */
+}
+
+.bg-text-line {
+    white-space: nowrap;
+    font-size: 2.2rem; /* Reduced for tighter density */
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #fff;
+    /* We animate transformX continuously */
+    will-change: transform;
+}
+
+/* 
+  To create a seamless loop, the text string must be very long (repeated many times).
+  We translate it from 0 to -50%. Because the first half and second half are identical,
+  the jump back to 0 is invisible.
+*/
+.scroll-left {
+    animation: scroll-diagonal-left 40s linear infinite;
+}
+
+.scroll-right {
+    animation: scroll-diagonal-right 50s linear infinite;
+}
+
+@keyframes scroll-diagonal-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); } 
+}
+
+@keyframes scroll-diagonal-right {
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(0%); } 
+}
+
 /* --- Mobile Specific Overrides --- */
 @media (max-width: 768px) {
     .container {
         padding: 5px;
+        padding-top: env(safe-area-inset-top, 15px); /* fixes Safari notch overlap */
     }
 
     /* Force Top Bar to stack */
@@ -758,4 +832,26 @@ body.theme-newyear-body {
         padding: 4px 6px;
     }
 
-}
+
+@media (max-width: 768px) {
+    /* --- ANIMATED BACKGROUND on mobile --- */
+    .animated-bg {
+        opacity: 0.07;
+    }
+
+    .bg-text-line {
+        font-size: 1.4rem;
+    }
+
+    /* HEADER-LEFT: wrap on narrow screens */
+    .header-left {
+        flex-wrap: wrap;
+        gap: 5px 8px;
+    }
+
+    #hero-quote {
+        font-size: 0.7rem !important;
+        max-width: 45vw;
+    }
+
+}
