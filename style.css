@@ -23,7 +23,7 @@ body {
 }
 
 .container {
-    max-width: 1600px;
+    max-width: 1024px;
     height: 100%;
     margin: 0 auto;
     padding: 10px;
@@ -31,18 +31,60 @@ body {
     flex-direction: column;
 }
 
-/* Top Bar */
-.top-bar {
+.top-bar-container {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
     background: #111;
     border: 1px solid #333;
     padding: 8px 16px;
     border-radius: 8px;
     margin-bottom: 10px;
     flex-shrink: 0;
-    min-height: 50px;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.week-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding-top: 8px;
+    border-top: 1px solid #333;
+}
+
+.add-task-top-btn {
+    position: absolute;
+    left: 0;
+    background: #ffd700;
+    color: #000;
+    border-color: #ffd700;
+}
+
+.nav-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.week-btn {
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+}
+
+.week-btn:hover {
+    background: #333;
 }
 
 .header-left {
@@ -128,17 +170,27 @@ body {
 .day-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 8px;
     padding-bottom: 6px;
     border-bottom: 1px solid #222;
     flex-shrink: 0;
 }
 
+.day-title-col {
+    display: flex;
+    flex-direction: column;
+}
+
 .day-name {
     font-size: 1.1rem;
     font-weight: 700;
     color: #fff;
+}
+
+.day-date {
+    font-size: 0.8rem;
+    color: #888;
 }
 
 .day-badge {
@@ -168,10 +220,10 @@ body {
     background: #0a0a0a;
     border: 1px solid #222;
     border-radius: 6px;
-    padding: 8px 12px;
+    padding: 8px 10px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     min-height: 50px;
 }
 
@@ -195,17 +247,19 @@ body {
 }
 
 .lesson-subject {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: #fff;
     margin-bottom: 4px;
+    word-break: break-word; /* Allows long text/names to break on PC too */
 }
 
 .lesson-details {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: #777;
     display: flex;
-    gap: 10px;
+    flex-wrap: wrap; /* Allows Teacher and Room to stack gracefully on PC if too long */
+    gap: 6px;
 }
 
 .lesson-time-col {
@@ -228,6 +282,256 @@ body {
 
 .lesson-item.active-lesson .lesson-subject {
     color: #fff;
+}
+
+/* Inline Lesson Tasks */
+.lesson-task-list {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #333;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.lesson-task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #ffd700;
+    cursor: pointer;
+    padding: 4px 6px;
+    background: rgba(255, 215, 0, 0.05);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    transition: all 0.2s;
+}
+
+.lesson-task-item:hover {
+    background: rgba(255, 215, 0, 0.1);
+}
+
+.lesson-task-item.completed {
+    color: #666;
+    text-decoration: line-through;
+    border-color: transparent;
+    background: transparent;
+}
+
+.lesson-task-item.hidden-task {
+    color: #555;
+    border-style: dotted;
+    background: transparent;
+    opacity: 0.7;
+}
+
+.task-check-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.task-text-content {
+    flex-grow: 1;
+    word-break: break-word;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-box {
+    background: #141414;
+    border: 1px solid #333;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transform: translateY(20px);
+    transition: transform 0.2s;
+}
+
+.modal-overlay.active .modal-box {
+    transform: translateY(0);
+}
+
+.modal-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #fff;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-bottom: 6px;
+}
+
+.form-input {
+    width: 100%;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #666;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 0.95rem;
+}
+
+.btn-cancel {
+    background: #222;
+    color: #aaa;
+}
+
+.btn-cancel:hover { background: #333; color: #fff; }
+
+.btn-primary {
+    background: #ffd700;
+    color: #000;
+}
+
+.btn-primary:hover { background: #e6c200; }
+
+/* Action Menu Grid */
+.action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #222;
+    border: 1px solid #333;
+    padding: 15px 10px;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: #333;
+    border-color: #555;
+    transform: translateY(-2px);
+}
+
+.action-icon {
+    font-size: 1.5rem;
+}
+
+.action-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.action-btn.complete:hover { background: #1a331a; border-color: #2e5c2e; color: #4CAF50;}
+.action-btn.hide:hover { background: #331a1a; border-color: #5c2e2e; color: #f44336;}
+.action-btn.edit:hover { background: #1a2a33; border-color: #2e4a5c; color: #2196F3;}
+.action-btn.move:hover { background: #332b1a; border-color: #5c4e2e; color: #FFC107;}
+
+.action-btn.delete { color: #ff5252; border-color: #551111; }
+.action-btn.delete:hover { background: #440000; border-color: #aa1111; color: #ff8888; }
+
+/* Holidays */
+.holiday-item {
+    justify-content: center;
+    text-align: center;
+    background: transparent !important;
+    border: 2px dashed #444 !important;
+    color: #888;
+    min-height: 100px;
+}
+
+.holiday-item .lesson-subject {
+    color: #aaa;
+    font-size: 1.2rem;
+}
+
+.theme-defender {
+    border-color: #4a5d23 !important;
+    background: linear-gradient(135deg, #1f2b15 0%, #304221 100%) !important;
+}
+
+.theme-womens {
+    border-color: #b76e79 !important;
+    background: linear-gradient(135deg, #4a212b 0%, #2f151c 100%) !important;
+}
+
+.theme-spring, .theme-victory {
+    border-color: #8b0000 !important;
+    background: linear-gradient(135deg, #300 0%, #100 100%) !important;
+}
+
+.theme-newyear {
+    border-color: #005f6b !important;
+    background: linear-gradient(135deg, #001f3f 0%, #003366 100%) !important;
+}
+
+/* Full Body Holidays */
+body.theme-defender-body {
+    background: radial-gradient(circle at center, #233318 0%, #050505 100%);
+}
+
+body.theme-womens-body {
+    background: radial-gradient(circle at center, #3d1b24 0%, #050505 100%);
+}
+
+body.theme-spring-body, body.theme-victory-body {
+    background: radial-gradient(circle at center, #330000 0%, #050505 100%);
+}
+
+body.theme-newyear-body {
+    background: radial-gradient(circle at center, #001f3f 0%, #050505 100%);
 }
 
 /* Mobile */
@@ -303,50 +607,68 @@ body {
     .mobile-nav {
         display: flex;
     }
-
-    /* Lesson Items: Stack Content vertically on strict mobile */
-    .lesson-item {
+    
+    /* Week Nav Mobile Override */
+    .week-nav {
         flex-direction: column;
-        /* Stack vertically! */
-        align-items: flex-start;
-        height: auto;
-        /* Allow growth */
-        padding: 10px;
-        gap: 5px;
+        gap: 12px;
+        align-items: stretch;
     }
 
-    /* Number stays at top left essentially via flex, wait.
-       If column, number is row 1.
-       Let's change: keep Row but wrap content.
-    */
+    .add-task-top-btn {
+        position: static;
+        width: 100%;
+        padding: 10px;
+        font-size: 1rem;
+    }
+
+    .nav-controls {
+        width: 100%;
+        gap: 6px;
+        justify-content: space-between;
+    }
+
+    .nav-controls .week-btn {
+        flex: 1;
+        padding: 8px 4px;
+        font-size: 0.8rem;
+    }
+
+    /* Lesson Items: CSS Grid for strictly bounded wrapping */
     .lesson-item {
-        flex-direction: row;
-        flex-wrap: wrap;
-        /* WRAP */
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px;
+        padding: 10px;
+        height: auto;
     }
 
     .lesson-number {
-        margin-right: 5px;
+        margin: 0;
     }
 
     .lesson-content {
-        flex-basis: 70%;
-        /* Take most width */
+        min-width: 0; /* Prevents flex/grid blowout */
     }
 
-    /* Force Time column to break to new line */
     .lesson-time-col {
-        flex-basis: 100%;
+        grid-column: 1 / -1;
         text-align: left;
-        /* Align left when stacked */
-        margin-top: 5px;
-        padding-left: 35px;
-        /* Indent to match text */
+        padding-left: 30px;
+        margin-top: 2px;
         color: #aaa;
+        font-size: 0.8rem;
     }
 
-    /* Ensure text doesn't flow off */
     .lesson-subject {
+        font-size: 0.95rem; /* Slightly smaller for mobile */
         white-space: normal;
+        word-wrap: break-word;
+    }
+
+    .lesson-details {
+        flex-direction: column; /* Stack teacher and room on very small screens */
+        gap: 2px;
+        font-size: 0.8rem;
     }
 }
