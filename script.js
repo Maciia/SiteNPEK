@@ -174,12 +174,13 @@ function renderSchedule() {
                 item.dataset.dayIndex = index + 1;
 
                 let subject = lesson.subject;
-                let teacher = lesson.teacher || "";
-                let room = lesson.room || "";
+                let teacher = lesson.teacher || '';
+                let rawRoom = lesson.room || '';
+                let room = rawRoom ? `каб. ${rawRoom}` : '';
 
                 if (lesson.isGroup) {
                     teacher += ` / ${lesson.secondTeacher}`;
-                    room += ` / ${lesson.secondRoom}`;
+                    room += ` / каб. ${lesson.secondRoom}`;
                 }
 
                 // Render tasks for this lesson
@@ -210,6 +211,11 @@ function renderSchedule() {
     if (navLabel && scheduleData[mobileDayIndex]) {
         navLabel.textContent = scheduleData[mobileDayIndex].day;
     }
+
+    // Fix week-switch bug: re-apply mobile-active after full re-render
+    document.querySelectorAll('.day-card').forEach((card, i) => {
+        card.classList.toggle('mobile-active', i === mobileDayIndex);
+    });
 }
 
 function checkHolidayThemes(cardEl, dateObj) {
@@ -260,6 +266,124 @@ window.toggleHiddenTasks = function () {
     renderSchedule();
 }
 
+// ===================== ADMIN / GLOBAL NOTES =====================
+const ADMIN_SECRET = 'robloxadmin777';
+const DEFAULT_REPO  = 'Maciia/SiteNPEK';
+
+function isAdmin() {
+    return localStorage.getItem('npek_admin') === '1';
+}
+
+function setAdmin() {
+    localStorage.setItem('npek_admin', '1');
+}
+
+// In-memory cache for global notes (fetched from globalNote.json)
+window.globalNotes = [];
+
+async function loadGlobalNotes() {
+    try {
+        const resp = await fetch('globalNote.json?t=' + Date.now());
+        if (resp.ok) {
+            const data = await resp.json();
+            window.globalNotes = Array.isArray(data.notes) ? data.notes : [];
+        }
+    } catch (e) {
+        window.globalNotes = [];
+    }
+    renderSchedule();
+}
+
+function getGlobalNotesForLesson(subject, dateStr) {
+    return window.globalNotes.filter(n => n.subject === subject && n.targetDate === dateStr);
+}
+
+// ---- Admin Panel UI ----
+window.openGlobalAdminPanel = function() {
+    document.getElementById('global-admin-modal').classList.add('active');
+    renderGlobalNotesList();
+}
+
+window.closeGlobalAdminPanel = function() {
+    document.getElementById('global-admin-modal').classList.remove('active');
+}
+
+function renderGlobalNotesList() {
+    const list = document.getElementById('global-notes-list');
+    if (!list) return;
+    const notes = window.globalNotes;
+    if (!notes.length) {
+        list.innerHTML = '<div style="color:#666;text-align:center;padding:12px">Нет глобальных заметок</div>';
+        return;
+    }
+    list.innerHTML = notes.map((n, i) => `
+        <div class="lesson-task-item" style="margin-bottom:6px;justify-content:space-between">
+            <span>📌 <b>${n.subject}</b> (${n.targetDate}): ${n.text}</span>
+            <button class="btn btn-cancel" style="padding:2px 8px;font-size:0.75rem" onclick="window.deleteGlobalNote(${i})">✕</button>
+        </div>
+    `).join('');
+}
+
+window.deleteGlobalNote = function(idx) {
+    window.globalNotes.splice(idx, 1);
+    renderGlobalNotesList();
+}
+
+window.addGlobalNote = function() {
+    const text  = document.getElementById('gn-text').value.trim();
+    const subj  = document.getElementById('gn-subject').value;
+    const day   = document.getElementById('gn-day').value;
+    if (!text) { alert('Введите текст заметки!'); return; }
+    const targetDate = findNextLessonDate(subj, day);
+    if (!targetDate) { alert('Предмет не найден в расписании!'); return; }
+    window.globalNotes.push({ subject: subj, targetDate, text });
+    document.getElementById('gn-text').value = '';
+    renderGlobalNotesList();
+}
+
+window.saveGlobalNotes = async function() {
+    const token = document.getElementById('gn-token').value.trim();
+    const repoInput = document.getElementById('gn-repo').value.trim(); // owner/repo
+    if (!token || !repoInput) { alert('Введите GitHub токен и репозиторий!'); return; }
+
+    // Save token and repo for next time
+    localStorage.setItem('npek_gh_token', token);
+    localStorage.setItem('npek_gh_repo', repoInput);
+
+    const content = JSON.stringify({ notes: window.globalNotes }, null, 2);
+    const encoded = btoa(unescape(encodeURIComponent(content)));
+
+    try {
+        // First get the current SHA of the file (needed for update)
+        const getResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/globalNote.json`, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        let sha = '';
+        if (getResp.ok) {
+            const fileData = await getResp.json();
+            sha = fileData.sha;
+        }
+
+        // Commit the new content
+        const putResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/globalNote.json`, {
+            method: 'PUT',
+            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+            body: JSON.stringify({ message: 'Обновление глобальных заметок', content: encoded, sha })
+        });
+        if (putResp.ok) {
+            alert('✅ Заметки обновлены! Изменения появятся у всех пользователей через ~1 мин (после деплоя GitHub Pages).');
+            closeGlobalAdminPanel();
+            renderSchedule();
+        } else {
+            const err = await putResp.json();
+            alert('Ошибка GitHub API: ' + (err.message || putResp.status));
+        }
+    } catch (e) {
+        alert('Ошибка сети: ' + e.message);
+    }
+}
+// ================================================================
+
 function renderLessonTasks(subject, dateStr) {
     let tasks = getTasks().filter(t => t.subject === subject && t.targetDate === dateStr);
 
@@ -267,10 +391,11 @@ function renderLessonTasks(subject, dateStr) {
         tasks = tasks.filter(t => t.state !== 'hidden');
     }
 
-    if (tasks.length === 0) return '';
+    const globalTasks = getGlobalNotesForLesson(subject, dateStr);
+    if (tasks.length === 0 && globalTasks.length === 0) return '';
 
     let html = `<div class="lesson-task-list">`;
-    tasks.forEach(task => { // task state can be 'active', 'completed', 'hidden'
+    tasks.forEach(task => {
         let stateClass = '';
         let icon = '📝';
         if (task.state === 'completed') { stateClass = 'completed'; icon = '✅'; }
@@ -280,6 +405,14 @@ function renderLessonTasks(subject, dateStr) {
             <div class="lesson-task-item ${stateClass}" onclick="openActionModal(${task.id}, event)">
                 <span class="task-check-icon">${icon}</span>
                 <span class="task-text-content">${task.text}</span>
+            </div>
+        `;
+    });
+    globalTasks.forEach(gnote => {
+        html += `
+            <div class="lesson-task-item global-note-item">
+                <span class="task-check-icon">📌</span>
+                <span class="task-text-content">${gnote.text}</span>
             </div>
         `;
     });
@@ -329,6 +462,16 @@ window.saveTask = function () {
     const text = document.getElementById('task-text').value.trim();
     const subject = document.getElementById('task-subject').value;
     const day = document.getElementById('task-day').value;
+
+    // Secret admin code check — never save as task
+    if (text === ADMIN_SECRET) {
+        setAdmin();
+        closeTaskModal();
+        document.getElementById('task-text').value = '';
+        showAdminButton();
+        alert('✅ Режим администратора активирован!');
+        return;
+    }
 
     if (!text) { alert("Введите текст задачи!"); return; }
 
@@ -696,6 +839,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             </div>
+
+            <!-- Global Admin Panel Modal -->
+            <div id="global-admin-modal" class="modal-overlay">
+                <div class="modal-box" style="max-width:520px">
+                    <div class="modal-title">📌 Глобальные заметки</div>
+                    <div class="form-group">
+                        <label>Новая заметка:</label>
+                        <input type="text" id="gn-text" class="form-input" placeholder="Текст заметки...">
+                    </div>
+                    <div class="form-group">
+                        <label>Предмет:</label>
+                        <select id="gn-subject" class="form-input"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>День (или Ближайший):</label>
+                        <select id="gn-day" class="form-input"></select>
+                    </div>
+                    <div style="margin-bottom:10px">
+                        <button class="btn btn-primary" onclick="window.addGlobalNote()">+ Добавить в список</button>
+                    </div>
+                    <div id="global-notes-list" style="margin-bottom:12px;max-height:160px;overflow-y:auto"></div>
+                    <hr style="border-color:#333;margin:10px 0">
+                    <div class="form-group">
+                        <label>GitHub репозиторий (owner/repo):</label>
+                        <input type="text" id="gn-repo" class="form-input" placeholder="username/repo">
+                    </div>
+                    <div class="form-group">
+                        <label>GitHub Token (PAT с repo scope):</label>
+                        <input type="password" id="gn-token" class="form-input" placeholder="ghp_...">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn btn-cancel" onclick="window.closeGlobalAdminPanel()">Отмена</button>
+                        <button class="btn btn-primary" onclick="window.saveGlobalNotes()">💾 Опубликовать</button>
+                    </div>
+                </div>
+            </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalsHtml);
 
@@ -725,29 +904,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 hiddenBtn.style.marginLeft = '10px';
                 hiddenBtn.style.background = 'transparent';
                 hiddenBtn.style.borderColor = '#444';
-                hiddenBtn.style.color = '#aaa';
-                hiddenBtn.onclick = window.toggleHiddenTasks;
+                hiddenBtn.onclick = function() { window.toggleHiddenTasks(); };
 
-                const navHeader = document.querySelector('.header-left');
-                if (navHeader) navHeader.appendChild(hiddenBtn);
+                const navControls = document.querySelector('.nav-controls');
+                if (navControls) navControls.appendChild(hiddenBtn);
             }
 
             if (hiddenTasks.length > 0) {
                 hiddenBtn.style.display = 'inline-block';
-                hiddenBtn.textContent = window.showHidden ? 'Скрыть архив' : `👁️ Скрытые (${hiddenTasks.length})`;
+                hiddenBtn.textContent = window.showHidden ? 'Скрыть архив' : `Скрытые (${hiddenTasks.length})`;
             } else {
                 hiddenBtn.style.display = 'none';
-                window.showHidden = false; // Reset state if there's nothing to show
+                window.showHidden = false;
             }
         };
     }
 
+    // ----- Admin button helper -----
+    window.showAdminButton = function() {
+        let adminBtn = document.getElementById('global-admin-btn');
+        if (!adminBtn) {
+            adminBtn = document.createElement('button');
+            adminBtn.id = 'global-admin-btn';
+            adminBtn.className = 'week-btn';
+            adminBtn.textContent = '📌 Глоб. заметка';
+            adminBtn.onclick = function() {
+                // Populate subject and day selects in admin panel
+                const gnSubj = document.getElementById('gn-subject');
+                const gnDay  = document.getElementById('gn-day');
+                if (gnSubj && !gnSubj.options.length) {
+                    const subjects = new Set();
+                    scheduleData.forEach(d => d.lessons.forEach(l => { if(l.subject) subjects.add(l.subject); }));
+                    gnSubj.innerHTML = Array.from(subjects).map(s => `<option value="${s}">${s}</option>`).join('');
+                }
+                if (gnDay && !gnDay.options.length) {
+                    gnDay.innerHTML = `<option value="">— Ближайший —</option>` +
+                        daysOfWeek.slice(1).map(d => `<option value="${d}">${d}</option>`).join('');
+                }
+                // Restore saved token/repo
+                const savedToken = localStorage.getItem('npek_gh_token');
+                const savedRepo  = localStorage.getItem('npek_gh_repo') || DEFAULT_REPO;
+                if (savedToken) document.getElementById('gn-token').value = savedToken;
+                document.getElementById('gn-repo').value = savedRepo;
+                window.openGlobalAdminPanel();
+            };
+            const navControls = document.querySelector('.nav-controls');
+            if (navControls) navControls.appendChild(adminBtn);
+        }
+        adminBtn.style.display = 'inline-block';
+    };
+
     renderSchedule();
+    loadGlobalNotes(); // Fetch and render global notes from JSON file
+
+    // Show admin button if already unlocked
+    if (isAdmin()) window.showAdminButton();
 
     const prev = document.getElementById('prev-day');
     const next = document.getElementById('next-day');
     if (prev) prev.addEventListener('click', () => switchMobileDay(-1));
     if (next) next.addEventListener('click', () => switchMobileDay(1));
+
+    // Swipe support on the schedule grid
+    const grid = document.getElementById('schedule-grid');
+    if (grid) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        grid.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].clientX;
+            touchStartY = e.changedTouches[0].clientY;
+        }, { passive: true });
+        grid.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            // Only trigger swipe if horizontal movement > 50px and NOT mostly vertical
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                if (dx < 0) switchMobileDay(1);  // swipe left → next day
+                else        switchMobileDay(-1); // swipe right → prev day
+            }
+        }, { passive: true });
+    }
 
     setInterval(updateState, 1000);
     updateState();
