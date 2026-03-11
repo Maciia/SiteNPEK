@@ -546,6 +546,12 @@ body.theme-newyear-body {
 }
 
 /* Mobile */
+.schedule-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
 .mobile-nav {
     display: none;
     margin-top: 10px;
@@ -622,6 +628,10 @@ body.theme-newyear-body {
 
     .mobile-nav {
         display: flex;
+        order: -1;       /* Move above the schedule grid */
+        margin-top: 0;
+        margin-bottom: 8px;
+        border-radius: 8px;
     }
 
     /* Week Nav Mobile */
@@ -653,86 +663,90 @@ body.theme-newyear-body {
         text-overflow: ellipsis;
     }
 
-    /* ── Compact single-row lesson cards ── */
+    /* ── Compact lesson cards: 2-row layout ── */
     .lesson-item {
         display: flex;
         flex-direction: row;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 10px;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 10px;
         height: auto;
-        min-height: 44px;
         flex-wrap: nowrap;
     }
 
     .lesson-number {
-        width: 20px;
-        height: 20px;
-        font-size: 0.75rem;
+        width: 22px;
+        height: 22px;
+        font-size: 0.78rem;
         flex-shrink: 0;
-        margin: 0;
+        margin: 2px 0 0;
     }
 
-    /* All text info in one flex row */
+    /* All text info — stacked: main row + teacher row */
     .lesson-content {
         flex: 1;
         min-width: 0;
         display: flex;
-        flex-direction: row;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 0 6px;
+        flex-direction: column;
+        gap: 2px;
     }
 
+    /* Main row: subject + room */
     .lesson-subject {
-        font-size: 0.88rem;
-        font-weight: 600;
+        font-size: 1rem;
+        font-weight: 700;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 130px;
+        max-width: 100%;
     }
 
     .lesson-details {
         display: flex;
         flex-direction: row;
         flex-wrap: nowrap;
-        gap: 4px;
-        font-size: 0.75rem;
+        gap: 5px;
+        font-size: 0.78rem;
         color: #888;
-        overflow: hidden;
     }
 
     .lesson-details span {
         white-space: nowrap;
     }
 
+    /* Teacher on second row — full width, no ellipsis */
     .lesson-details .lesson-teacher {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 110px;
+        overflow: visible;
+        text-overflow: clip;
+        max-width: none;
+        color: #999;
+    }
+
+    .lesson-details .lesson-room {
+        color: #aaa;
     }
 
     .lesson-time-col {
-        font-size: 0.72rem;
-        color: #777;
+        font-size: 0.78rem;
+        color: #888;
         flex-shrink: 0;
         text-align: right;
-        min-width: 70px;
+        padding-top: 2px;
     }
 
     .lesson-time {
         white-space: nowrap;
+        font-size: 0.78rem;
     }
 
     /* Compact task list under lessons */
     .lesson-task-list {
         width: 100%;
-        flex-basis: 100%;
     }
 
     .lesson-task-item {
-        font-size: 0.78rem;
-        padding: 3px 5px;
+        font-size: 0.8rem;
+        padding: 4px 6px;
     }
+
 }

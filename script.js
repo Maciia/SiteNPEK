@@ -281,17 +281,35 @@ function setAdmin() {
 // In-memory cache for global notes (fetched from globalNote.json)
 window.globalNotes = [];
 
+function saveGlobalNotesCache() {
+    localStorage.setItem('npek_global_notes', JSON.stringify(window.globalNotes));
+}
+
 async function loadGlobalNotes() {
+    // 1. Load from localStorage cache first for instant display
+    try {
+        const cached = localStorage.getItem('npek_global_notes');
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed)) window.globalNotes = parsed;
+        }
+    } catch (e) {}
+    renderSchedule();
+
+    // 2. Then try to fetch fresh from file (GitHub Pages)
     try {
         const resp = await fetch('globalNote.json?t=' + Date.now());
         if (resp.ok) {
             const data = await resp.json();
-            window.globalNotes = Array.isArray(data.notes) ? data.notes : [];
+            const fresh = Array.isArray(data.notes) ? data.notes : [];
+            // Only update cache if the file has notes (avoids wiping local data when running offline)
+            if (fresh.length > 0) {
+                window.globalNotes = fresh;
+                saveGlobalNotesCache();
+                renderSchedule();
+            }
         }
-    } catch (e) {
-        window.globalNotes = [];
-    }
-    renderSchedule();
+    } catch (e) { /* offline or local file — use cached */ }
 }
 
 function getGlobalNotesForLesson(subject, dateStr) {
@@ -326,7 +344,9 @@ function renderGlobalNotesList() {
 
 window.deleteGlobalNote = function(idx) {
     window.globalNotes.splice(idx, 1);
+    saveGlobalNotesCache();
     renderGlobalNotesList();
+    renderSchedule();
 }
 
 window.addGlobalNote = function() {
@@ -338,7 +358,9 @@ window.addGlobalNote = function() {
     if (!targetDate) { alert('Предмет не найден в расписании!'); return; }
     window.globalNotes.push({ subject: subj, targetDate, text });
     document.getElementById('gn-text').value = '';
+    saveGlobalNotesCache();
     renderGlobalNotesList();
+    renderSchedule(); // Show note immediately under the lesson
 }
 
 window.saveGlobalNotes = async function() {
@@ -371,6 +393,7 @@ window.saveGlobalNotes = async function() {
             body: JSON.stringify({ message: 'Обновление глобальных заметок', content: encoded, sha })
         });
         if (putResp.ok) {
+            saveGlobalNotesCache(); // Cache locally too after successful push
             alert('✅ Заметки обновлены! Изменения появятся у всех пользователей через ~1 мин (после деплоя GitHub Pages).');
             closeGlobalAdminPanel();
             renderSchedule();
