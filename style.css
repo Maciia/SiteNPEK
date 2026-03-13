@@ -62,7 +62,7 @@ body {
 
 .weather-widget {
     font-size: 0.85rem;
-    color: #fff; /* Updated from gold to white */
+    color: #fff;
     text-align: right;
     display: flex;
     flex-direction: column;
@@ -73,7 +73,9 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(4px);
     width: fit-content;
+    max-width: 100%;
     white-space: nowrap;
+    overflow: hidden;
 }
 
 .top-bar-container {
@@ -1098,6 +1100,62 @@ body.theme-christmas-body {
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
+        }
+
+        .header {
+            padding: 8px 10px !important;
+            gap: 12px !important;
+            flex-direction: row !important; /* Keep horizontal but wrap if needed */
+            flex-wrap: nowrap !important; /* Force single row for these two to stay side-by-side */
+            justify-content: space-between !important;
+            align-items: center !important;
+            min-height: auto !important;
+        }
+
+        .header-left {
+            justify-content: flex-start !important;
+            width: auto !important;
+            margin-bottom: 0 !important;
+            flex: 1 !important;
+        }
+
+        .weather-widget, .timer-container {
+            flex: 1 !important;
+            width: auto !important;
+            max-width: 50% !important;
+            font-size: 0.8rem !important; /* Increased from 0.65 */
+            white-space: normal !important;
+            line-height: 1.2 !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+        .weather-widget span, .timer-container span {
+            font-size: 0.65rem !important; /* Smaller for secondary info */
+        }
+
+        .weather-widget > div, .timer-container > div {
+            gap: 4px !important;
+        }
+
+        #countdown-timer, .weather-widget > div span:first-child {
+            font-size: 1.4rem !important; /* Increased from 1.1 */
+            font-weight: 800 !important;
+        }
+        
+        #timer-status, #real-time {
+            font-size: 0.65rem !important;
+        }
+        
+        .status-right {
+            display: flex !important;
+            gap: 12px !important;
+            flex: 1.2 !important;
+            justify-content: flex-end !important;
+            align-items: center !important;
         }
 
         #hero-quote {

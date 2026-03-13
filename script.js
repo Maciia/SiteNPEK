@@ -205,11 +205,15 @@ function renderSchedule() {
                     </div>
                 `;
 
-                if (lesson.isGroup) {
-                    const t1 = teacher;
-                    const t2 = lesson.secondTeacher;
-                    const r1 = room;
-                    const r2 = lesson.secondRoom ? `каб. ${lesson.secondRoom}` : '';
+                // Handle Splitting (either via explicit isGroup or via "//" delimiter)
+                const splitTeacher = teacher.split(' // ');
+                const splitRoom = rawRoom.split(' // ');
+
+                if (lesson.isGroup || splitTeacher.length > 1 || splitRoom.length > 1) {
+                    const t1 = splitTeacher[0];
+                    const t2 = splitTeacher[1] || lesson.secondTeacher || t1;
+                    const r1 = splitRoom[0] ? `каб. ${splitRoom[0]}` : '';
+                    const r2 = (splitRoom[1] || lesson.secondRoom) ? `каб. ${splitRoom[1] || lesson.secondRoom}` : r1;
 
                     const activeT = (window.currentGroupMember === 2) ? t2 : t1;
                     const activeR = (window.currentGroupMember === 2) ? r2 : r1;
@@ -1195,6 +1199,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
             </div>
+
+            <!-- Project Info Footer -->
+            <div style="margin: 20px auto; max-width: 600px; padding: 0 15px; color: #666; font-size: 0.8rem; text-align: center; line-height: 1.4;">
+                <p>🚀 <b>Что нового:</b> поддержка числителя/знаменателя, замен на один день и разделения групп (разделитель //). Под капотом — скрытая админ-панель для контроля контента.</p>
+                <p style="margin-top: 6px; opacity: 0.7;">Используется в личных и групповых целях. Копирование не запрещается, но не наглейте.</p>
+            </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalsHtml);
 
@@ -1306,12 +1316,43 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchWeather(); // Load weather for tomorrow
     initAnimatedBackground(); // Generate diagonal scrolling background
 
+    // --- UI Oscillators (Decoupled from quotes) ---
+    window.currentGroupMember = 1;
+    setInterval(() => {
+        window.currentGroupMember = (window.currentGroupMember === 1) ? 2 : 1;
+        document.querySelectorAll('.group-oscillator').forEach(el => {
+            const t = el.querySelector('.lesson-teacher');
+            const r = el.querySelector('.lesson-room');
+            if (t && r) {
+                t.style.opacity = 0; r.style.opacity = 0;
+                setTimeout(() => {
+                    t.textContent = (window.currentGroupMember === 1) ? el.dataset.t1 : el.dataset.t2;
+                    r.textContent = (window.currentGroupMember === 1) ? el.dataset.r1 : el.dataset.r2;
+                    t.style.opacity = 1; r.style.opacity = 1;
+                }, 500);
+            }
+        });
+    }, 4200);
+
+    window.currentHolidayMember = 1;
+    setInterval(() => {
+        window.currentHolidayMember = (window.currentHolidayMember === 1) ? 2 : 1;
+        document.querySelectorAll('.holiday-oscillator').forEach(el => {
+            const span = el.querySelector('.oscillator-text');
+            if (span) {
+                span.style.opacity = 0;
+                setTimeout(() => {
+                    span.textContent = (window.currentHolidayMember === 1) ? el.dataset.l1 : el.dataset.l2;
+                    span.style.opacity = 1;
+                }, 500);
+            }
+        });
+    }, 3800);
+
     // Setup hero quote rotation
     const heroQuoteEl = document.getElementById('hero-quote');
     if (heroQuoteEl && window.userPhrases && window.userPhrases.length > 0) {
         let quoteIdx = 0;
-
-        // Shuffle quotes initially
         const shuffle = (arr) => {
             let s = [...arr];
             for (let i = s.length - 1; i > 0; i--) {
@@ -1328,46 +1369,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 heroQuoteEl.textContent = '"' + quotesList[quoteIdx] + '"';
                 heroQuoteEl.style.opacity = 1;
                 quoteIdx = (quoteIdx + 1) % quotesList.length;
-            }, 500); // Match CSS transition duration
+            }, 500);
         };
-
-        // Quote rotation (Staggered: every 5.5s)
-        window.currentQuoteIndex = 0;
         setInterval(updateQuote, 5500);
-
-        // Group oscillation (Staggered: every 4.2s)
-        window.currentGroupMember = 1;
-        setInterval(() => {
-            window.currentGroupMember = (window.currentGroupMember === 1) ? 2 : 1;
-            document.querySelectorAll('.group-oscillator').forEach(el => {
-                const t = el.querySelector('.lesson-teacher');
-                const r = el.querySelector('.lesson-room');
-                if (t && r) {
-                    t.style.opacity = 0; r.style.opacity = 0;
-                    setTimeout(() => {
-                        t.textContent = (window.currentGroupMember === 1) ? el.dataset.t1 : el.dataset.t2;
-                        r.textContent = (window.currentGroupMember === 1) ? el.dataset.r1 : el.dataset.r2;
-                        t.style.opacity = 1; r.style.opacity = 1;
-                    }, 500);
-                }
-            });
-        }, 4200);
-
-        // Holiday label oscillation (Staggered: every 3.8s)
-        window.currentHolidayMember = 1;
-        setInterval(() => {
-            window.currentHolidayMember = (window.currentHolidayMember === 1) ? 2 : 1;
-            document.querySelectorAll('.holiday-oscillator').forEach(el => {
-                const span = el.querySelector('.oscillator-text');
-                if (span) {
-                    span.style.opacity = 0;
-                    setTimeout(() => {
-                        span.textContent = (window.currentHolidayMember === 1) ? el.dataset.l1 : el.dataset.l2;
-                        span.style.opacity = 1;
-                    }, 500);
-                }
-            });
-        }, 3800);
     }
 
     // Show admin button if already unlocked
