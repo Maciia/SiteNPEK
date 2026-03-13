@@ -578,10 +578,10 @@ async function fetchWeather() {
 
         weatherWidget.innerHTML = `
             <div style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
-                <span style="font-size: 1.5rem; font-weight: 800; color: #fff;">${temp}°</span>
-                <span style="font-size: 0.9rem; color: #fff; font-weight: 700;">${emoji} ${desc}</span>
+                <span style="font-weight: 800; color: #fff;">${temp}°</span>
+                <span style="color: #fff; font-weight: 700;">${emoji} ${desc}</span>
             </div>
-            <div style="font-size: 0.72rem; color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
+            <div style="color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
                 <span>Ощущается ${feelsLike}°</span>
                 <span style="color: #444;">|</span>
                 <span>Завтра ${tMin}°..${tMax}°</span>

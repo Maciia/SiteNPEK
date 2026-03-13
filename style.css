@@ -37,6 +37,8 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     line-height: 1.4;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
 }
 
 .container {
@@ -1134,20 +1136,20 @@ body.theme-christmas-body {
         }
 
         .weather-widget span, .timer-container span {
-            font-size: 0.65rem !important; /* Smaller for secondary info */
+            font-size: 0.6rem !important; /* Even smaller for Safari/iPhone */
         }
 
         .weather-widget > div, .timer-container > div {
             gap: 4px !important;
         }
 
-        #countdown-timer, .weather-widget > div span:first-child {
-            font-size: 1.4rem !important; /* Increased from 1.1 */
+        #countdown-timer, .weather-widget > div:first-child span:first-child {
+            font-size: 1.4rem !important; /* ONLY target main temp (first div) */
             font-weight: 800 !important;
         }
         
         #timer-status, #real-time {
-            font-size: 0.65rem !important;
+            font-size: 0.6rem !important;
         }
         
         .status-right {
