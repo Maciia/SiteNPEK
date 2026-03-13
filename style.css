@@ -62,23 +62,50 @@ body {
     flex-shrink: 0;
 }
 
-.weather-widget {
-    font-size: 0.85rem;
-    color: #fff;
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(4px);
-    width: fit-content;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
+/* Global Timer Styles (PC & Mobile) */
+.timer-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important; /* Default for PC */
+    overflow: visible !important;
 }
+
+.timer-main-row {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 6px !important;
+    justify-content: flex-end !important;
+}
+
+.timer-status-inline {
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+}
+
+#countdown-timer.timer-main {
+    font-size: 1.6rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    color: #fff !important;
+}
+
+.timer-secondary-row {
+    display: flex !important;
+    gap: 4px !important;
+    align-items: baseline !important;
+    justify-content: flex-end !important;
+    margin-top: 2px !important;
+}
+
+.timer-secondary-row span, .timer-secondary-row #real-time {
+    font-size: 0.72rem !important;
+    color: #555 !important;
+    font-weight: 500 !important;
+    line-height: 1.1 !important;
+    font-family: inherit !important;
+}
+
 
 .top-bar-container {
     display: flex;
@@ -196,28 +223,6 @@ body {
     gap: 20px;
 }
 
-.real-time {
-    font-weight: 700;
-    font-family: monospace;
-    font-size: 1.2rem;
-}
-
-.timer-container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.countdown-timer {
-    font-weight: 700;
-    color: #fff;
-    font-family: monospace;
-    font-size: 1.5rem;
-}
-
-#timer-status {
-    white-space: nowrap;
-}
 
 /* Hide unused */
 .status-panel,
@@ -1123,65 +1128,18 @@ body.theme-christmas-body {
 
         .status-right {
             display: flex !important;
-            gap: 8px !important;
             flex: 1 !important;
             width: 100% !important;
-            justify-content: space-around !important; /* Space widgets evenly */
+            justify-content: center !important; /* Center the timer */
             align-items: center !important;
         }
 
-        .weather-widget, .timer-container {
-            flex: 1 !important;
-            width: auto !important;
-            min-width: 0 !important;
-            padding: 0 !important;
-            background: transparent !important;
-            border: none !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important; /* Center content within widget */
-            overflow: visible !important;
+        /* Mobile Alignment Overrides */
+        .timer-container {
+            align-items: center !important;
         }
-
-        /* Large numbers: Temp and Countdown */
-        .weather-temp, .timer-main {
-            font-size: 1.4rem !important;
-            font-weight: 800 !important;
-            line-height: 1 !important;
-            color: #fff !important;
-            flex-shrink: 0 !important;
-        }
-
-        /* Middle text: Weather description */
-        .weather-desc {
-            font-size: 0.7rem !important;
-            line-height: 1.1 !important;
-            margin-left: 4px !important;
-            white-space: normal !important;
-            word-break: break-word !important;
-            text-align: center !important; /* Center text */
-        }
-
-        /* Tiny secondary info: Feels like, Tomorrow, Status, Real time */
-        .weather-feels, .weather-forecast, .timer-status, .real-time {
-            font-size: 0.58rem !important;
-            color: #aaa !important;
-            white-space: nowrap !important;
-        }
-
-        .weather-row-main, .timer-main-row {
-            justify-content: center !important; /* Center row content */
-            display: flex !important;
-            align-items: baseline !important;
-            flex-wrap: nowrap !important;
-            width: 100% !important;
-        }
-
-        .weather-row-secondary, .timer-secondary-row {
-            gap: 4px !important;
-            margin-top: 2px !important;
-            justify-content: center !important; /* Center secondary info */
-            flex-wrap: wrap !important;
+        .timer-main-row, .timer-secondary-row {
+            justify-content: center !important;
         }
         
         #hero-quote {

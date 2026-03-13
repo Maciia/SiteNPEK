@@ -537,60 +537,6 @@ window.saveGlobalNotes = async function () {
 }
 // ================================================================
 
-// Fetch Weather for Novosibirsk (Titova 14)
-async function fetchWeather() {
-    const weatherWidget = document.getElementById('weather-widget');
-    if (!weatherWidget) return;
-
-    try {
-        // Novosibirsk, Titova 14 (using wttr.in with specific location or coords)
-        const url = `https://wttr.in/Novosibirsk?format=j1`;
-
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error('Network error');
-        const data = await resp.json();
-
-        // Current weather
-        const current = data.current_condition[0];
-        const temp = current.temp_C;
-        const feelsLike = current.FeelsLikeC;
-        const desc = current.lang_ru ? current.lang_ru[0].value : current.weatherDesc[0].value;
-        const wCode = current.weatherCode;
-
-        // Tomorrow's forecast
-        const tomorrow = data.weather[1];
-        const tMax = tomorrow.maxtempC;
-        const tMin = tomorrow.mintempC;
-
-        // Map wttr.in weather codes to emojis (simplified)
-        // https://www.worldweatheronline.com/feed/wwo-codes.txt
-        let emoji = '🌤️';
-        const code = parseInt(wCode);
-        if (code === 113) emoji = '☀️'; // Sunny
-        else if (code === 116) emoji = '🌤️'; // Partly cloudy
-        else if (code === 119) emoji = '☁️'; // Cloudy
-        else if (code === 122) emoji = '☁️'; // Overcast
-        else if (code >= 176 && code <= 200) emoji = '🌦️'; // Patchy rain
-        else if (code >= 227 && code <= 230) emoji = '❄️'; // Snow
-        else if (code >= 293 && code <= 311) emoji = '🌧️'; // Rain
-        else if (code >= 323 && code <= 338) emoji = '❄️'; // Heavy snow
-        else if (code >= 386) emoji = '⛈️'; // Thunder
-
-        weatherWidget.innerHTML = `
-            <div class="weather-row-main" style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
-                <span class="weather-temp" style="font-weight: 800; color: #fff;">${temp}°</span>
-                <span class="weather-desc" style="color: #fff; font-weight: 700;">${emoji} ${desc}</span>
-            </div>
-            <div class="weather-row-secondary" style="color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
-                <span class="weather-feels">Ощущается ${feelsLike}°</span>
-                <span style="color: #444;">|</span>
-                <span class="weather-forecast">Завтра ${tMin}°..${tMax}°</span>
-            </div>
-        `;
-    } catch (e) {
-        weatherWidget.innerHTML = `<span style="color:#aaa">Погода временно недоступна</span>`;
-    }
-}
 
 function renderLessonTasks(subject, dateStr) {
     let tasks = getTasks().filter(t => t.subject === subject && t.targetDate === dateStr);
@@ -937,11 +883,11 @@ function updateState() {
                     if (ranges.indexOf(nextLesson) === 0) {
                         statusText = "До пары";
                     } else {
-                        statusText = "Конец перемены";
+                        statusText = "Перемена";
                     }
                 } else {
                     if (ranges.length > 0 && nowMins >= ranges[ranges.length - 1].end) {
-                        timerText = "00:00";
+                        timerText = "";
                         statusText = "На сегодня всё";
                     } else {
                         timerText = "--:--";
@@ -1034,16 +980,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span id="hero-quote" style="font-size: 0.78rem; color: #555; font-style: italic; transition: opacity 0.5s ease; opacity: 1; flex-shrink: 1; min-width: 0; white-space: normal; line-height: 1.2; text-align: left;"></span>
                 </div>
                 <div class="status-right">
-                    <div id="weather-widget" class="weather-widget" title="Погода на завтра (Новосибирск, ул. Титова, 14)">
-                        🌦 Загрузка погоды...
-                    </div>
-                    <div class="timer-container weather-widget">
-                        <div class="timer-main-row" style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
-                            <span id="countdown-timer" class="countdown-timer timer-main" style="font-weight: 800; color: #fff;">--:--</span>
+                    <div class="timer-container">
+                        <div class="timer-main-row">
+                            <span id="timer-status" class="timer-status-inline">--</span>
+                            <span id="countdown-timer" class="countdown-timer timer-main">--:--</span>
                         </div>
-                        <div class="timer-secondary-row" style="color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
-                            <span id="timer-status" class="timer-status">--</span>
-                            <span id="real-time" class="real-time" style="color: #666; margin-left: 4px;">--:--</span>
+                        <div class="timer-secondary-row">
+                            <span>Сейчас НСК:</span>
+                            <span id="real-time" class="real-time">--:--</span>
                         </div>
                     </div>
                 </div>
@@ -1313,7 +1257,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSchedule();
     loadGlobalNotes(); // Fetch and render global notes from JSON file
     loadGlobalSchedule(); // Fetch global schedule from JSON file
-    fetchWeather(); // Load weather for tomorrow
     initAnimatedBackground(); // Generate diagonal scrolling background
 
     // --- UI Oscillators (Decoupled from quotes) ---
