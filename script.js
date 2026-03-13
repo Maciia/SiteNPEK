@@ -187,49 +187,49 @@ function renderSchedule() {
         lessonsToRender.forEach(lesson => {
             if (lesson.week !== 'both' && lesson.week !== getWeekType()) return;
 
-                const item = document.createElement('li');
-                item.className = 'lesson-item';
+            const item = document.createElement('li');
+            item.className = 'lesson-item';
 
-                item.dataset.time = lesson.time;
-                item.dataset.dayIndex = index + 1;
+            item.dataset.time = lesson.time;
+            item.dataset.dayIndex = index + 1;
 
-                let subject = lesson.subject;
-                let teacher = lesson.teacher || '';
-                let rawRoom = lesson.room || '';
-                let room = rawRoom ? `каб. ${rawRoom}` : '';
+            let subject = lesson.subject;
+            let teacher = lesson.teacher || '';
+            let rawRoom = lesson.room || '';
+            let room = rawRoom ? `каб. ${rawRoom}` : '';
 
-                let detailsInner = `
+            let detailsInner = `
                     <div class="lesson-details-compact">
                         <span class="lesson-teacher">${teacher}</span>
                         <span class="lesson-room">${room}</span>
                     </div>
                 `;
 
-                // Handle Splitting (either via explicit isGroup or via "//" delimiter)
-                const splitTeacher = teacher.split(' // ');
-                const splitRoom = rawRoom.split(' // ');
+            // Handle Splitting (either via explicit isGroup or via "//" delimiter)
+            const splitTeacher = teacher.split(' // ');
+            const splitRoom = rawRoom.split(' // ');
 
-                if (lesson.isGroup || splitTeacher.length > 1 || splitRoom.length > 1) {
-                    const t1 = splitTeacher[0];
-                    const t2 = splitTeacher[1] || lesson.secondTeacher || t1;
-                    const r1 = splitRoom[0] ? `каб. ${splitRoom[0]}` : '';
-                    const r2 = (splitRoom[1] || lesson.secondRoom) ? `каб. ${splitRoom[1] || lesson.secondRoom}` : r1;
+            if (lesson.isGroup || splitTeacher.length > 1 || splitRoom.length > 1) {
+                const t1 = splitTeacher[0];
+                const t2 = splitTeacher[1] || lesson.secondTeacher || t1;
+                const r1 = splitRoom[0] ? `каб. ${splitRoom[0]}` : '';
+                const r2 = (splitRoom[1] || lesson.secondRoom) ? `каб. ${splitRoom[1] || lesson.secondRoom}` : r1;
 
-                    const activeT = (window.currentGroupMember === 2) ? t2 : t1;
-                    const activeR = (window.currentGroupMember === 2) ? r2 : r1;
+                const activeT = (window.currentGroupMember === 2) ? t2 : t1;
+                const activeR = (window.currentGroupMember === 2) ? r2 : r1;
 
-                    detailsInner = `
+                detailsInner = `
                         <div class="lesson-details-compact group-oscillator" data-t1="${t1}" data-t2="${t2}" data-r1="${r1}" data-r2="${r2}">
                             <span class="lesson-teacher oscillator-text">${activeT}</span>
                             <span class="lesson-room oscillator-text">${activeR}</span>
                         </div>
                     `;
-                }
+            }
 
-                // Render tasks for this lesson
-                const tasksHtml = renderLessonTasks(subject, cardDateStr);
+            // Render tasks for this lesson
+            const tasksHtml = renderLessonTasks(subject, cardDateStr);
 
-                item.innerHTML = `
+            item.innerHTML = `
                     <div class="lesson-number">${lesson.id}</div>
                     <div class="lesson-content">
                         <div class="lesson-subject">${subject}</div>
@@ -242,8 +242,8 @@ function renderSchedule() {
                        <div class="lesson-time">${lesson.time}</div>
                     </div>
                 `;
-                list.appendChild(item);
-            });
+            list.appendChild(item);
+        });
 
         container.appendChild(card);
     });
@@ -262,7 +262,7 @@ function renderSchedule() {
     document.querySelectorAll('.lesson-item').forEach(item => {
         const subject = item.querySelector('.lesson-subject');
         const teacher = item.querySelector('.lesson-teacher');
-        
+
         const shrink = (el, max) => {
             if (!el) return;
             let size = parseFloat(window.getComputedStyle(el).fontSize);
@@ -271,7 +271,7 @@ function renderSchedule() {
                 el.style.fontSize = size + 'px';
             }
         };
-        
+
         // Slightly delay to ensure layout is ready
         setTimeout(() => {
             shrink(subject);
@@ -349,7 +349,7 @@ function setAdmin() {
     localStorage.setItem('npek_admin', '1');
 }
 
-window.logoutAdmin = function() {
+window.logoutAdmin = function () {
     localStorage.removeItem('npek_admin');
     const adminBtn = document.getElementById('global-admin-btn');
     if (adminBtn) adminBtn.style.display = 'none';
@@ -577,14 +577,14 @@ async function fetchWeather() {
         else if (code >= 386) emoji = '⛈️'; // Thunder
 
         weatherWidget.innerHTML = `
-            <div style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
-                <span style="font-weight: 800; color: #fff;">${temp}°</span>
-                <span style="color: #fff; font-weight: 700;">${emoji} ${desc}</span>
+            <div class="weather-row-main" style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
+                <span class="weather-temp" style="font-weight: 800; color: #fff;">${temp}°</span>
+                <span class="weather-desc" style="color: #fff; font-weight: 700;">${emoji} ${desc}</span>
             </div>
-            <div style="color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
-                <span>Ощущается ${feelsLike}°</span>
+            <div class="weather-row-secondary" style="color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
+                <span class="weather-feels">Ощущается ${feelsLike}°</span>
                 <span style="color: #444;">|</span>
-                <span>Завтра ${tMin}°..${tMax}°</span>
+                <span class="weather-forecast">Завтра ${tMin}°..${tMax}°</span>
             </div>
         `;
     } catch (e) {
@@ -1038,12 +1038,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         🌦 Загрузка погоды...
                     </div>
                     <div class="timer-container weather-widget">
-                        <div style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
-                            <span id="countdown-timer" class="countdown-timer" style="font-size: 1.5rem; font-weight: 800; color: #fff;">--:--</span>
+                        <div class="timer-main-row" style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
+                            <span id="countdown-timer" class="countdown-timer timer-main" style="font-weight: 800; color: #fff;">--:--</span>
                         </div>
-                        <div style="font-size: 0.72rem; color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
-                            <span id="timer-status">--</span>
-                            <span id="real-time" class="real-time" style="color: #666; font-size: 0.8rem; margin-left: 4px;">--:--</span>
+                        <div class="timer-secondary-row" style="color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
+                            <span id="timer-status" class="timer-status">--</span>
+                            <span id="real-time" class="real-time" style="color: #666; margin-left: 4px;">--:--</span>
                         </div>
                     </div>
                 </div>
@@ -1256,15 +1256,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const nav = document.getElementById('nav-curtain-area');
         const icon = document.getElementById('collapse-icon');
         const container = document.querySelector('.top-bar-container');
-        
+
         const isCollapsed = curtain.classList.toggle('header-collapsed');
         if (nav) nav.classList.toggle('nav-shutter-mode', isCollapsed);
         if (container) container.classList.toggle('container-shutter-mode', isCollapsed);
-        
+
         if (icon) {
             icon.textContent = isCollapsed ? '▼' : '▲';
         }
-        
+
         // Save state
         localStorage.setItem('npek_header_collapsed', isCollapsed);
     };
@@ -1423,7 +1423,7 @@ window.openScheduleAdminPanel = function () {
     const savedRepo = localStorage.getItem('npek_gh_repo');
     if (savedToken) document.getElementById('sa-token').value = savedToken;
     document.getElementById('sa-repo').value = savedRepo || DEFAULT_REPO;
-    
+
     window.renderScheduleAdminList();
     document.getElementById('schedule-admin-modal').classList.add('active');
 };
@@ -1432,7 +1432,7 @@ window.closeScheduleAdminPanel = function () {
     document.getElementById('schedule-admin-modal').classList.remove('active');
 };
 
-window.toggleAdminScheduleMode = function() {
+window.toggleAdminScheduleMode = function () {
     const type = document.getElementById('sa-type').value;
     document.getElementById('sa-day-container').style.display = (type === 'permanent') ? 'block' : 'none';
     document.getElementById('sa-date-container').style.display = (type === 'override') ? 'block' : 'none';
@@ -1468,7 +1468,7 @@ window.renderScheduleAdminList = function () {
     window.refreshAdminLessonRows();
 };
 
-window.refreshAdminLessonRows = function() {
+window.refreshAdminLessonRows = function () {
     const list = document.getElementById('schedule-admin-list');
     if (!list) return;
 
@@ -1485,27 +1485,27 @@ window.refreshAdminLessonRows = function() {
             <input type="text" placeholder="Препод" style="flex: 1; min-width: 100px;" value="${l.teacher || ''}" oninput="window.updateAdminRow(${i}, 'teacher', this.value)">
             <input type="text" placeholder="Каб" style="width: 50px;" value="${l.room || ''}" oninput="window.updateAdminRow(${i}, 'room', this.value)">
             <select style="width: 100px;" onchange="window.updateAdminRow(${i}, 'week', this.value)">
-                <option value="both" ${l.week==='both'?'selected':''}>Обе</option>
-                <option value="num" ${l.week==='num'?'selected':''}>Числитель</option>
-                <option value="den" ${l.week==='den'?'selected':''}>Знаменатель</option>
+                <option value="both" ${l.week === 'both' ? 'selected' : ''}>Обе</option>
+                <option value="num" ${l.week === 'num' ? 'selected' : ''}>Числитель</option>
+                <option value="den" ${l.week === 'den' ? 'selected' : ''}>Знаменатель</option>
             </select>
             <button class="btn btn-cancel" style="padding: 2px 8px;" onclick="window.removeScheduleAdminRow(${i})">✕</button>
         </div>
     `).join('');
 };
 
-window.updateAdminRow = function(idx, field, val) {
+window.updateAdminRow = function (idx, field, val) {
     if (field === 'id') window.currentAdminLessons[idx][field] = parseInt(val) || 1;
     else window.currentAdminLessons[idx][field] = val;
 };
 
-window.addScheduleAdminRow = function() {
-    const lastId = window.currentAdminLessons.length > 0 ? window.currentAdminLessons[window.currentAdminLessons.length-1].id : 0;
+window.addScheduleAdminRow = function () {
+    const lastId = window.currentAdminLessons.length > 0 ? window.currentAdminLessons[window.currentAdminLessons.length - 1].id : 0;
     window.currentAdminLessons.push({ id: lastId + 1, time: '', subject: '', teacher: '', room: '', week: 'both' });
     window.refreshAdminLessonRows();
 };
 
-window.removeScheduleAdminRow = function(idx) {
+window.removeScheduleAdminRow = function (idx) {
     window.currentAdminLessons.splice(idx, 1);
     window.refreshAdminLessonRows();
 };
@@ -1516,7 +1516,7 @@ window.saveGlobalSchedule = async function () {
     if (!token || !repoInput) { alert('Введите GitHub токен и репозиторий!'); return; }
 
     const type = document.getElementById('sa-type').value;
-    
+
     // Prepare data
     let finalSchedule = JSON.parse(JSON.stringify(scheduleData));
     let finalOverrides = JSON.parse(JSON.stringify(window.scheduleOverrides));

@@ -1106,9 +1106,9 @@ body.theme-christmas-body {
 
         .header {
             padding: 8px 10px !important;
-            gap: 12px !important;
-            flex-direction: row !important; /* Keep horizontal but wrap if needed */
-            flex-wrap: nowrap !important; /* Force single row for these two to stay side-by-side */
+            gap: 8px !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important; /* Allow wrapping if too wide */
             justify-content: space-between !important;
             align-items: center !important;
             min-height: auto !important;
@@ -1116,50 +1116,74 @@ body.theme-christmas-body {
 
         .header-left {
             justify-content: flex-start !important;
-            width: auto !important;
-            margin-bottom: 0 !important;
+            width: 100% !important; /* Title takes full width on very small screens to give room to widgets? No, let's keep it flexible. */
+            margin-bottom: 4px !important;
+            flex: none !important;
+        }
+
+        .status-right {
+            display: flex !important;
+            gap: 8px !important;
             flex: 1 !important;
+            width: 100% !important;
+            justify-content: space-around !important; /* Space widgets evenly */
+            align-items: center !important;
         }
 
         .weather-widget, .timer-container {
             flex: 1 !important;
             width: auto !important;
-            max-width: 50% !important;
-            font-size: 0.8rem !important; /* Increased from 0.65 */
-            white-space: normal !important;
-            line-height: 1.2 !important;
+            min-width: 0 !important;
             padding: 0 !important;
             background: transparent !important;
             border: none !important;
             display: flex !important;
             flex-direction: column !important;
+            align-items: center !important; /* Center content within widget */
+            overflow: visible !important;
         }
 
-        .weather-widget span, .timer-container span {
-            font-size: 0.6rem !important; /* Even smaller for Safari/iPhone */
-        }
-
-        .weather-widget > div, .timer-container > div {
-            gap: 4px !important;
-        }
-
-        #countdown-timer, .weather-widget > div:first-child span:first-child {
-            font-size: 1.4rem !important; /* ONLY target main temp (first div) */
+        /* Large numbers: Temp and Countdown */
+        .weather-temp, .timer-main {
+            font-size: 1.4rem !important;
             font-weight: 800 !important;
-        }
-        
-        #timer-status, #real-time {
-            font-size: 0.6rem !important;
-        }
-        
-        .status-right {
-            display: flex !important;
-            gap: 12px !important;
-            flex: 1.2 !important;
-            justify-content: flex-end !important;
-            align-items: center !important;
+            line-height: 1 !important;
+            color: #fff !important;
+            flex-shrink: 0 !important;
         }
 
+        /* Middle text: Weather description */
+        .weather-desc {
+            font-size: 0.7rem !important;
+            line-height: 1.1 !important;
+            margin-left: 4px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            text-align: center !important; /* Center text */
+        }
+
+        /* Tiny secondary info: Feels like, Tomorrow, Status, Real time */
+        .weather-feels, .weather-forecast, .timer-status, .real-time {
+            font-size: 0.58rem !important;
+            color: #aaa !important;
+            white-space: nowrap !important;
+        }
+
+        .weather-row-main, .timer-main-row {
+            justify-content: center !important; /* Center row content */
+            display: flex !important;
+            align-items: baseline !important;
+            flex-wrap: nowrap !important;
+            width: 100% !important;
+        }
+
+        .weather-row-secondary, .timer-secondary-row {
+            gap: 4px !important;
+            margin-top: 2px !important;
+            justify-content: center !important; /* Center secondary info */
+            flex-wrap: wrap !important;
+        }
+        
         #hero-quote {
             font-size: 0.72rem !important;
             max-width: 100% !important;
