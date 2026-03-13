@@ -66,7 +66,8 @@ let scheduleData = [
         lessons: [
             { id: 1, time: "8:30 – 10:00", subject: "Физ-ра", teacher: "Матвей Андреевич", room: "с.з.", week: "den" },
             { id: 2, time: "10:15 – 11:45", subject: "ОБЗР", teacher: "Олег Геннадьевич", room: "32", week: "both" },
-            { id: 3, time: "12:20 – 13:50", subject: "Инф-ка", teacher: "Максим Сергеевич", room: "48", week: "both" }
+            { id: 3, time: "12:20 – 13:50", subject: "Инф-ка", teacher: "Максим Сергеевич", room: "48", week: "both" },
+            { id: 4, time: "14:00 – 15:30", subject: "Общество", teacher: "Думбадзе", room: "38", week: "both" }
         ]
     },
     {
@@ -137,35 +138,54 @@ function renderSchedule() {
         cardDate.setDate(renderMonday.getDate() + index);
         const cardDateStr = cardDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'numeric' });
 
+        // Overrides Check
+        let lessonsToRender = dayData.lessons;
+        if (window.scheduleOverrides && window.scheduleOverrides[cardDateStr]) {
+            lessonsToRender = window.scheduleOverrides[cardDateStr];
+            card.classList.add('has-override'); // Visual hint if needed
+        }
+
         // Highlight today only if weekOffset is 0
         if (index === mobileDayIndex && weekOffset === 0) card.classList.add('mobile-active');
         if ((index + 1) === renderCurrentDay && weekOffset === 0) card.classList.add('today');
 
         // Holiday Check
-        const isHoliday = checkHolidayThemes(card, cardDate);
+        const hol = checkHolidayThemes(card, cardDate);
+        let holidayHtml = '';
+        if (hol) {
+            const label1 = hol.name;
+            if (hol.isDayOff) {
+                const label2 = '(предп. выходной)';
+                const activeLabel = (window.currentHolidayMember === 2) ? label2 : label1;
+                holidayHtml = `<div class="holiday-oscillator" data-l1="${label1}" data-l2="${label2}" style="font-size: 0.8rem; color: #ffd700; font-weight: 700; margin-top: 4px; text-transform: uppercase;">
+                    <span class="oscillator-text">${activeLabel}</span>
+                </div>`;
+            } else {
+                holidayHtml = `<div style="font-size: 0.8rem; color: #ffd700; font-weight: 700; margin-top: 4px; text-transform: uppercase;">${label1}</div>`;
+            }
+        }
+
+        const isToday = (index + 1) === renderCurrentDay && weekOffset === 0;
+        const badgeHtml = isToday ? '<span class="day-badge">Сегодня</span>' : '';
 
         card.innerHTML = `
-            <div class="day-header">
-                <div class="day-title-col">
-                    <span class="day-name">${dayData.day}</span>
-                    <span class="day-date">${cardDateStr}</span>
+            <div class="day-header" style="flex-direction: column; align-items: flex-start;">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: baseline;">
+                    <div class="day-title-col">
+                        <span class="day-name">${dayData.day}</span>
+                        <span class="day-date">${cardDateStr}</span>
+                    </div>
+                    ${badgeHtml}
                 </div>
-                <span class="day-badge">${((index + 1) === renderCurrentDay && weekOffset === 0) ? 'Сегодня' : ''}</span>
+                ${holidayHtml}
             </div>
             <ul class="lesson-list"></ul>
         `;
 
         const list = card.querySelector('.lesson-list');
 
-
-        if (isHoliday) {
-            const item = document.createElement('li');
-            item.className = 'lesson-item holiday-item';
-            item.innerHTML = `<div class="lesson-content"><div class="lesson-subject">Выходной день</div></div>`;
-            list.appendChild(item);
-        } else {
-            dayData.lessons.forEach(lesson => {
-                if (lesson.week !== 'both' && lesson.week !== getWeekType()) return;
+        lessonsToRender.forEach(lesson => {
+            if (lesson.week !== 'both' && lesson.week !== getWeekType()) return;
 
                 const item = document.createElement('li');
                 item.className = 'lesson-item';
@@ -178,9 +198,28 @@ function renderSchedule() {
                 let rawRoom = lesson.room || '';
                 let room = rawRoom ? `каб. ${rawRoom}` : '';
 
+                let detailsInner = `
+                    <div class="lesson-details-compact">
+                        <span class="lesson-teacher">${teacher}</span>
+                        <span class="lesson-room">${room}</span>
+                    </div>
+                `;
+
                 if (lesson.isGroup) {
-                    teacher += ` / ${lesson.secondTeacher}`;
-                    room += ` / каб. ${lesson.secondRoom}`;
+                    const t1 = teacher;
+                    const t2 = lesson.secondTeacher;
+                    const r1 = room;
+                    const r2 = lesson.secondRoom ? `каб. ${lesson.secondRoom}` : '';
+
+                    const activeT = (window.currentGroupMember === 2) ? t2 : t1;
+                    const activeR = (window.currentGroupMember === 2) ? r2 : r1;
+
+                    detailsInner = `
+                        <div class="lesson-details-compact group-oscillator" data-t1="${t1}" data-t2="${t2}" data-r1="${r1}" data-r2="${r2}">
+                            <span class="lesson-teacher oscillator-text">${activeT}</span>
+                            <span class="lesson-room oscillator-text">${activeR}</span>
+                        </div>
+                    `;
                 }
 
                 // Render tasks for this lesson
@@ -191,8 +230,7 @@ function renderSchedule() {
                     <div class="lesson-content">
                         <div class="lesson-subject">${subject}</div>
                          <div class="lesson-details">
-                            <span class="lesson-teacher">${teacher}</span>
-                            <span class="lesson-room">${room}</span>
+                            ${detailsInner}
                         </div>
                         ${tasksHtml}
                     </div>
@@ -202,7 +240,6 @@ function renderSchedule() {
                 `;
                 list.appendChild(item);
             });
-        }
 
         container.appendChild(card);
     });
@@ -212,9 +249,30 @@ function renderSchedule() {
         navLabel.textContent = scheduleData[mobileDayIndex].day;
     }
 
-    // Fix week-switch bug: re-apply mobile-active after full re-render
+    // Fix week-switch bug
     document.querySelectorAll('.day-card').forEach((card, i) => {
         card.classList.toggle('mobile-active', i === mobileDayIndex);
+    });
+
+    // Auto-font-size check for subjects and teachers
+    document.querySelectorAll('.lesson-item').forEach(item => {
+        const subject = item.querySelector('.lesson-subject');
+        const teacher = item.querySelector('.lesson-teacher');
+        
+        const shrink = (el, max) => {
+            if (!el) return;
+            let size = parseFloat(window.getComputedStyle(el).fontSize);
+            while (el.scrollWidth > el.clientWidth && size > 8) {
+                size -= 0.5;
+                el.style.fontSize = size + 'px';
+            }
+        };
+        
+        // Slightly delay to ensure layout is ready
+        setTimeout(() => {
+            shrink(subject);
+            shrink(teacher);
+        }, 10);
     });
 }
 
@@ -224,27 +282,36 @@ function checkHolidayThemes(cardEl, dateObj) {
     const dateStr = `${d < 10 ? '0' + d : d}.${m < 10 ? '0' + m : m}`;
 
     const holidays = [
-        { date: '23.02', name: 'День защитника Отечества', theme: 'theme-defender' },
-        { date: '08.03', name: 'Международный женский день', theme: 'theme-womens' },
-        { date: '01.05', name: 'Праздник Весны и Труда', theme: 'theme-spring' },
-        { date: '09.05', name: 'День Победы', theme: 'theme-victory' },
-        { date: '31.12', name: 'Новый год', theme: 'theme-newyear' },
-        { date: '01.01', name: 'Новый год', theme: 'theme-newyear' }
+        { date: '23.02', name: 'День защитника Отечества', theme: 'theme-defender', isDayOff: true },
+        { date: '08.03', name: 'Международный женский день', theme: 'theme-womens', isDayOff: false },
+        { date: '01.05', name: 'Праздник Весны и Труда', theme: 'theme-spring', isDayOff: false },
+        { date: '09.05', name: 'День Победы', theme: 'theme-victory', isDayOff: true },
+        { date: '31.12', name: 'Новый год', theme: 'theme-newyear', isDayOff: true },
+        { date: '01.01', name: 'Новый год', theme: 'theme-newyear', isDayOff: true },
+        // Expanded Holiday Collection
+        { date: '29.01', name: 'Китайский Новый год', theme: 'theme-china', isDayOff: false },
+        { date: '24.01', name: 'Международный день образования', theme: 'theme-education', isDayOff: false },
+        { date: '25.01', name: 'День студента', theme: 'theme-student', isDayOff: false },
+        { date: '14.02', name: 'День святого Валентина', theme: 'theme-love', isDayOff: false },
+        { date: '17.03', name: 'День святого Патрика', theme: 'theme-green', isDayOff: false },
+        { date: '01.04', name: 'День смеха', theme: 'theme-fun', isDayOff: false },
+        { date: '22.04', name: 'День Земли', theme: 'theme-earth', isDayOff: false },
+        { date: '04.05', name: 'День Звёздных войн', theme: 'theme-stars', isDayOff: false },
+        { date: '21.06', name: 'Международный день йоги', theme: 'theme-yoga', isDayOff: false },
+        { date: '07.07', name: 'Танабата', theme: 'theme-japan', isDayOff: false },
+        { date: '12.08', name: 'Международный день молодёжи', theme: 'theme-youth', isDayOff: false },
+        { date: '01.09', name: 'День знаний', theme: 'theme-knowledge', isDayOff: false },
+        { date: '05.10', name: 'День учителя', theme: 'theme-teacher', isDayOff: false },
+        { date: '31.10', name: 'Хэллоуин', theme: 'theme-halloween', isDayOff: false },
+        { date: '05.11', name: 'Ночь Гая Фокса', theme: 'theme-fire', isDayOff: false },
+        { date: '25.12', name: 'Рождество', theme: 'theme-christmas', isDayOff: false }
     ];
 
     const hol = holidays.find(h => h.date === dateStr);
     if (hol) {
-        cardEl.classList.add(hol.theme);
-        // Also check if today is ACTUALLY this holiday to apply it to the whole body
-        const today = new Date();
-        const tD = today.getDate();
-        const tM = today.getMonth() + 1;
-        if (d === tD && m === tM && weekOffset === 0) {
-            document.body.classList.add(hol.theme + '-body');
-        }
-        return true;
+        return hol; // Return the holiday object for the label rendering
     }
-    return false;
+    return null;
 }
 
 // Smart Tasks Logic
@@ -277,6 +344,15 @@ function isAdmin() {
 function setAdmin() {
     localStorage.setItem('npek_admin', '1');
 }
+
+window.logoutAdmin = function() {
+    localStorage.removeItem('npek_admin');
+    const adminBtn = document.getElementById('global-admin-btn');
+    if (adminBtn) adminBtn.style.display = 'none';
+    window.closeGlobalAdminPanel();
+    window.closeScheduleAdminPanel();
+    alert('🔒 Режим администратора отключен.');
+};
 
 // In-memory cache for global notes (fetched from globalNote.json)
 window.globalNotes = [];
@@ -312,16 +388,19 @@ async function loadGlobalNotes() {
     } catch (e) { /* offline or local file — use cached */ }
 }
 
+window.scheduleOverrides = {}; // Dict of dateStr -> lessons[]
+
 async function loadGlobalSchedule() {
     // 1. Try localStorage
     try {
         const cached = localStorage.getItem('npek_global_schedule');
+        const cachedOverrides = localStorage.getItem('npek_global_overrides');
         if (cached) {
             const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length === 6) {
-                scheduleData = parsed;
-                renderSchedule();
-            }
+            if (Array.isArray(parsed) && parsed.length === 6) scheduleData = parsed;
+        }
+        if (cachedOverrides) {
+            window.scheduleOverrides = JSON.parse(cachedOverrides);
         }
     } catch (e) { }
 
@@ -333,8 +412,12 @@ async function loadGlobalSchedule() {
             if (Array.isArray(data.schedule) && data.schedule.length === 6) {
                 scheduleData = data.schedule;
                 localStorage.setItem('npek_global_schedule', JSON.stringify(scheduleData));
-                renderSchedule();
             }
+            if (data.overrides) {
+                window.scheduleOverrides = data.overrides;
+                localStorage.setItem('npek_global_overrides', JSON.stringify(window.scheduleOverrides));
+            }
+            renderSchedule();
         }
     } catch (e) { }
 }
@@ -456,34 +539,52 @@ async function fetchWeather() {
     if (!weatherWidget) return;
 
     try {
-        // Coordinates for Novosibirsk, Titova 14
-        const lat = 54.9818;
-        const lon = 82.8839;
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FNovosibirsk`;
+        // Novosibirsk, Titova 14 (using wttr.in with specific location or coords)
+        const url = `https://wttr.in/Novosibirsk?format=j1`;
 
         const resp = await fetch(url);
         if (!resp.ok) throw new Error('Network error');
         const data = await resp.json();
 
-        // Tomorrow's data (index 1)
-        const tMax = Math.round(data.daily.temperature_2m_max[1]);
-        const wCode = data.daily.weathercode[1];
+        // Current weather
+        const current = data.current_condition[0];
+        const temp = current.temp_C;
+        const feelsLike = current.FeelsLikeC;
+        const desc = current.lang_ru ? current.lang_ru[0].value : current.weatherDesc[0].value;
+        const wCode = current.weatherCode;
 
-        // Map WMO codes to simple emojis
-        let emoji = '🌤';
-        if (wCode === 0) emoji = '☀️'; // Clear
-        else if (wCode === 1 || wCode === 2) emoji = '🌤'; // Partly cloudy
-        else if (wCode === 3) emoji = '☁️'; // Overcast
-        else if (wCode >= 51 && wCode <= 67) emoji = '🌧'; // Rain
-        else if (wCode >= 71 && wCode <= 86) emoji = '❄️'; // Snow
-        else if (wCode >= 95) emoji = '⛈'; // Thunderstorm
+        // Tomorrow's forecast
+        const tomorrow = data.weather[1];
+        const tMax = tomorrow.maxtempC;
+        const tMin = tomorrow.mintempC;
+
+        // Map wttr.in weather codes to emojis (simplified)
+        // https://www.worldweatheronline.com/feed/wwo-codes.txt
+        let emoji = '🌤️';
+        const code = parseInt(wCode);
+        if (code === 113) emoji = '☀️'; // Sunny
+        else if (code === 116) emoji = '🌤️'; // Partly cloudy
+        else if (code === 119) emoji = '☁️'; // Cloudy
+        else if (code === 122) emoji = '☁️'; // Overcast
+        else if (code >= 176 && code <= 200) emoji = '🌦️'; // Patchy rain
+        else if (code >= 227 && code <= 230) emoji = '❄️'; // Snow
+        else if (code >= 293 && code <= 311) emoji = '🌧️'; // Rain
+        else if (code >= 323 && code <= 338) emoji = '❄️'; // Heavy snow
+        else if (code >= 386) emoji = '⛈️'; // Thunder
 
         weatherWidget.innerHTML = `
-            <div style="font-size: 1.1rem; color: #fff;">${emoji} Завтра: ${tMax > 0 ? '+' : ''}${tMax}°C</div>
-            <div style="font-size: 0.75rem; color: #888;">ул. Титова, 14</div>
+            <div style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
+                <span style="font-size: 1.5rem; font-weight: 800; color: #fff;">${temp}°</span>
+                <span style="font-size: 0.9rem; color: #fff; font-weight: 700;">${emoji} ${desc}</span>
+            </div>
+            <div style="font-size: 0.72rem; color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
+                <span>Ощущается ${feelsLike}°</span>
+                <span style="color: #444;">|</span>
+                <span>Завтра ${tMin}°..${tMax}°</span>
+            </div>
         `;
     } catch (e) {
-        weatherWidget.innerHTML = `<span style="color:#aaa">Погода недоступна</span>`;
+        weatherWidget.innerHTML = `<span style="color:#aaa">Погода временно недоступна</span>`;
     }
 }
 
@@ -766,6 +867,9 @@ function updateState() {
 
         const realTimeDisplay = document.getElementById('real-time');
         const timerDisplay = document.getElementById('countdown-timer');
+        const timerStatus = document.getElementById('timer-status');
+        let timerText = "--:--";
+        let statusText = "Ожидание";
 
         if (realTimeDisplay) {
             realTimeDisplay.textContent = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -778,9 +882,6 @@ function updateState() {
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         const weeksPassed = Math.floor(diffDays / 7);
         const realWeekType = (weeksPassed % 2 === 0) ? 'num' : 'den';
-
-        let timerText = "--:--";
-        let statusText = "Ожидание";
 
         if (realDayIdx === 0) {
             timerText = "Chill";
@@ -823,22 +924,31 @@ function updateState() {
                     let remainingSecs = 60 - nowSecs;
                     if (remainingSecs === 60) { remainingSecs = 0; remainingMins += 1; }
                     timerText = `${remainingMins}:${remainingSecs.toString().padStart(2, '0')}`;
+                    statusText = "Пара";
                 } else if (nextLesson) {
                     let remainingMins = nextLesson.start - nowMins - 1;
                     let remainingSecs = 60 - nowSecs;
                     if (remainingSecs === 60) { remainingSecs = 0; remainingMins += 1; }
                     timerText = `${remainingMins}:${remainingSecs.toString().padStart(2, '0')}`;
+                    if (ranges.indexOf(nextLesson) === 0) {
+                        statusText = "До пары";
+                    } else {
+                        statusText = "Конец перемены";
+                    }
                 } else {
                     if (ranges.length > 0 && nowMins >= ranges[ranges.length - 1].end) {
-                        timerText = "Домой";
+                        timerText = "00:00";
+                        statusText = "На сегодня всё";
                     } else {
                         timerText = "--:--";
+                        statusText = "Ожидание";
                     }
                 }
             }
         }
 
         if (timerDisplay) timerDisplay.textContent = timerText;
+        if (timerStatus) timerStatus.textContent = statusText;
 
     } catch (e) { console.error(e); }
 }
@@ -911,29 +1021,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusPanel) {
         statusPanel.className = 'top-bar-container';
         statusPanel.innerHTML = `
-            <div class="top-bar">
+            <div class="top-bar" id="header-curtain-area">
                 <div class="header-left">
-                    <h1 class="title">Расписание</h1>
-                    <div class="week-info" id="week-info-label"></div>
-                    <span id="hero-quote" style="font-size: 0.78rem; color: #555; font-style: italic; transition: opacity 0.5s ease; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; min-width: 0;"></span>
+                    <div class="title-row" style="display: flex; align-items: baseline; gap: 10px;">
+                        <h1 class="title">Расписание</h1>
+                        <div class="week-info" id="week-info-label"></div>
+                    </div>
+                    <span id="hero-quote" style="font-size: 0.78rem; color: #555; font-style: italic; transition: opacity 0.5s ease; opacity: 1; flex-shrink: 1; min-width: 0; white-space: normal; line-height: 1.2; text-align: left;"></span>
                 </div>
                 <div class="status-right">
                     <div id="weather-widget" class="weather-widget" title="Погода на завтра (Новосибирск, ул. Титова, 14)">
                         🌦 Загрузка погоды...
                     </div>
-                    <div class="timer-container">
-                        <span id="countdown-timer" class="countdown-timer">--:--</span>
+                    <div class="timer-container weather-widget">
+                        <div style="display: flex; align-items: baseline; gap: 8px; justify-content: flex-end;">
+                            <span id="countdown-timer" class="countdown-timer" style="font-size: 1.5rem; font-weight: 800; color: #fff;">--:--</span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #aaa; display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px;">
+                            <span id="timer-status">--</span>
+                            <span id="real-time" class="real-time" style="color: #666; font-size: 0.8rem; margin-left: 4px;">--:--</span>
+                        </div>
                     </div>
-                    <div id="real-time" class="real-time">--:--</div>
                 </div>
             </div>
-            <div class="week-nav">
+            
+            <div class="week-nav" id="nav-curtain-area">
                 <button class="week-btn add-task-top-btn" onclick="window.openTaskModal()">+ Заметка</button>
                 <div class="nav-controls">
                     <button class="week-btn" onclick="window.changeWeek(-1)">← Пред.</button>
                     <button class="week-btn" onclick="window.resetWeek()">Текущая неделя</button>
                     <button class="week-btn" onclick="window.changeWeek(1)">След. →</button>
                 </div>
+            </div>
+
+            <div class="collapse-wrapper-top">
+                <button class="collapse-toggle-top" id="collapse-header-btn" onclick="window.toggleHeaderCollapse()">
+                    <span id="collapse-icon">▲</span>
+                </button>
             </div>
         `;
         // Remove old header if exists
@@ -1009,32 +1133,65 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="btn btn-cancel" onclick="window.closeGlobalAdminPanel()">Отмена</button>
                         <button class="btn btn-primary" onclick="window.saveGlobalNotes()">💾 Опубликовать</button>
                     </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-primary" style="width: 100%; background: #4a90e2;" onclick="window.openScheduleAdminPanel()">📅 Редактор Расписания</button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-cancel" style="width: 100%; background: rgba(255,0,0,0.1); color: #ff5555; border-color: rgba(255,0,0,0.2);" onclick="window.logoutAdmin()">🙈 Скрыть панель (разлогиниться)</button>
+                    </div>
                 </div>
             </div>
 
             <!-- Global Schedule Admin Modal -->
             <div id="schedule-admin-modal" class="modal-overlay">
-                <div class="modal-box" style="max-width:600px; width:95%">
+                <div class="modal-box" style="max-width:800px; width:95%">
                     <div class="modal-title">✏️ Редактор Расписания</div>
                     
-                    <div class="form-group" style="margin-bottom: 12px">
-                        <label>Выберите день для редактирования:</label>
-                        <select id="sa-day-select" class="form-input" onchange="window.renderScheduleAdminList()"></select>
+                    <div class="form-group" style="display: flex; gap: 15px; margin-bottom: 12px; align-items: flex-end;">
+                        <div style="flex: 1;">
+                            <label>Тип изменения:</label>
+                            <select id="sa-type" class="form-input" onchange="window.toggleAdminScheduleMode()">
+                                <option value="permanent">Постоянное (шаблон по дню недели)</option>
+                                <option value="override">На один день (разовая замена)</option>
+                            </select>
+                        </div>
+                        <div id="sa-day-container" style="flex: 1;">
+                            <label>День недели:</label>
+                            <select id="sa-day-select" class="form-input" onchange="window.renderScheduleAdminList()"></select>
+                        </div>
+                        <div id="sa-date-container" style="flex: 1; display: none;">
+                            <label>Дата (дд.мм):</label>
+                            <input type="text" id="sa-date-input" class="form-input" placeholder="н-р: 15.03" oninput="window.renderScheduleAdminList()">
+                        </div>
                     </div>
 
-                    <div id="schedule-admin-list" style="margin-bottom:12px; max-height:300px; overflow-y:auto; border: 1px solid #333; padding: 5px; border-radius: 4px;">
+                    <div id="schedule-admin-list" style="margin-bottom:12px; max-height:400px; overflow-y:auto; border: 1px solid #444; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.2);">
                         <!-- Populate with lessons for selected day -->
                     </div>
                     
-                    <div style="margin-bottom:10px">
-                        <button class="btn btn-primary" style="width:100%" onclick="window.addScheduleAdminRow()">+ Добавить пустую пару</button>
+                    <div style="display: flex; gap: 10px; margin-bottom:10px">
+                        <button class="btn btn-primary" style="flex: 1" onclick="window.addScheduleAdminRow()">+ Добавить пару</button>
+                    </div>
+
+                    <div class="form-group" style="display: flex; gap: 10px; margin-bottom: 12px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid #333;">
+                        <div style="flex: 1.5;">
+                            <label style="font-size: 0.75rem;">GitHub Token:</label>
+                            <input type="password" id="sa-token" class="form-input" placeholder="ghp_xxx" style="font-size: 0.8rem; padding: 6px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.75rem;">Repo (user/repo):</label>
+                            <input type="text" id="sa-repo" class="form-input" placeholder="Maciia/SiteNPEK" style="font-size: 0.8rem; padding: 6px;">
+                        </div>
                     </div>
 
                     <hr style="border-color:#333;margin:10px 0">
-                    <p style="font-size:0.8rem; color:#888; margin-bottom: 8px;">Изменения применяются ко всем пользователям. Не забудьте указать токен в панели "Глоб. заметка" если он не сохранен.</p>
+                    <p style="font-size:0.8rem; color:#888; margin-bottom: 8px;"><b>Важно:</b> Постоянные изменения учитывают числитель/знаменатель. Одноразовые перекрывают всё расписание на этот день.</p>
                     <div class="modal-actions">
                         <button class="btn btn-cancel" onclick="window.closeScheduleAdminPanel()">Отмена</button>
-                        <button class="btn btn-primary" onclick="window.saveGlobalSchedule()">💾 Опубликовать Расписание</button>
+                        <button class="btn btn-primary" onclick="window.saveGlobalSchedule()">💾 Опубликовать всё</button>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-cancel" style="width: 100%; background: rgba(255,0,0,0.1); color: #ff5555; border-color: rgba(255,0,0,0.2);" onclick="window.logoutAdmin()">🙈 Скрыть панель (разлогиниться)</button>
                     </div>
                 </div>
             </div>
@@ -1081,6 +1238,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.showHidden = false;
             }
         };
+    }
+
+    // Toggle Header Area Collapse Logic
+    window.toggleHeaderCollapse = function () {
+        const curtain = document.getElementById('header-curtain-area');
+        const nav = document.getElementById('nav-curtain-area');
+        const icon = document.getElementById('collapse-icon');
+        const container = document.querySelector('.top-bar-container');
+        
+        const isCollapsed = curtain.classList.toggle('header-collapsed');
+        if (nav) nav.classList.toggle('nav-shutter-mode', isCollapsed);
+        if (container) container.classList.toggle('container-shutter-mode', isCollapsed);
+        
+        if (icon) {
+            icon.textContent = isCollapsed ? '▼' : '▲';
+        }
+        
+        // Save state
+        localStorage.setItem('npek_header_collapsed', isCollapsed);
+    };
+
+    // Restore collapse state
+    if (localStorage.getItem('npek_header_collapsed') === 'true') {
+        setTimeout(() => window.toggleHeaderCollapse(), 100);
     }
 
     // ----- Admin button helper -----
@@ -1150,8 +1331,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 500); // Match CSS transition duration
         };
 
-        setTimeout(updateQuote, 100);
-        setInterval(updateQuote, 3000); // Switch every 3 seconds
+        // Quote rotation (Staggered: every 5.5s)
+        window.currentQuoteIndex = 0;
+        setInterval(updateQuote, 5500);
+
+        // Group oscillation (Staggered: every 4.2s)
+        window.currentGroupMember = 1;
+        setInterval(() => {
+            window.currentGroupMember = (window.currentGroupMember === 1) ? 2 : 1;
+            document.querySelectorAll('.group-oscillator').forEach(el => {
+                const t = el.querySelector('.lesson-teacher');
+                const r = el.querySelector('.lesson-room');
+                if (t && r) {
+                    t.style.opacity = 0; r.style.opacity = 0;
+                    setTimeout(() => {
+                        t.textContent = (window.currentGroupMember === 1) ? el.dataset.t1 : el.dataset.t2;
+                        r.textContent = (window.currentGroupMember === 1) ? el.dataset.r1 : el.dataset.r2;
+                        t.style.opacity = 1; r.style.opacity = 1;
+                    }, 500);
+                }
+            });
+        }, 4200);
+
+        // Holiday label oscillation (Staggered: every 3.8s)
+        window.currentHolidayMember = 1;
+        setInterval(() => {
+            window.currentHolidayMember = (window.currentHolidayMember === 1) ? 2 : 1;
+            document.querySelectorAll('.holiday-oscillator').forEach(el => {
+                const span = el.querySelector('.oscillator-text');
+                if (span) {
+                    span.style.opacity = 0;
+                    setTimeout(() => {
+                        span.textContent = (window.currentHolidayMember === 1) ? el.dataset.l1 : el.dataset.l2;
+                        span.style.opacity = 1;
+                    }, 500);
+                }
+            });
+        }, 3800);
     }
 
     // Show admin button if already unlocked
@@ -1185,3 +1401,169 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateState, 1000);
     updateState();
 });
+
+// ======================== SCHEDULE ADMIN LOGIC ========================
+window.currentAdminLessons = [];
+
+window.openScheduleAdminPanel = function () {
+    const daySelect = document.getElementById('sa-day-select');
+    if (daySelect && !daySelect.options.length) {
+        daySelect.innerHTML = daysOfWeek.slice(1).map((d, i) => `<option value="${i}">${d}</option>`).join('');
+    }
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'numeric' });
+    document.getElementById('sa-date-input').value = dateStr;
+
+    // Load credentials from localStorage
+    const savedToken = localStorage.getItem('npek_gh_token');
+    const savedRepo = localStorage.getItem('npek_gh_repo');
+    if (savedToken) document.getElementById('sa-token').value = savedToken;
+    document.getElementById('sa-repo').value = savedRepo || DEFAULT_REPO;
+    
+    window.renderScheduleAdminList();
+    document.getElementById('schedule-admin-modal').classList.add('active');
+};
+
+window.closeScheduleAdminPanel = function () {
+    document.getElementById('schedule-admin-modal').classList.remove('active');
+};
+
+window.toggleAdminScheduleMode = function() {
+    const type = document.getElementById('sa-type').value;
+    document.getElementById('sa-day-container').style.display = (type === 'permanent') ? 'block' : 'none';
+    document.getElementById('sa-date-container').style.display = (type === 'override') ? 'block' : 'none';
+    window.renderScheduleAdminList();
+};
+
+window.renderScheduleAdminList = function () {
+    const type = document.getElementById('sa-type').value;
+    if (type === 'permanent') {
+        const dayIdx = parseInt(document.getElementById('sa-day-select').value);
+        window.currentAdminLessons = JSON.parse(JSON.stringify(scheduleData[dayIdx].lessons));
+    } else {
+        const dateKey = document.getElementById('sa-date-input').value.trim();
+        const existing = window.scheduleOverrides[dateKey];
+        if (existing) {
+            window.currentAdminLessons = JSON.parse(JSON.stringify(existing));
+        } else {
+            // Smart Template: find what day of week this date is
+            try {
+                const parts = dateKey.split('.');
+                const dateObj = new Date(new Date().getFullYear(), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                const dIdx = dateObj.getDay(); // 0 is Sunday
+                if (dIdx > 0 && dIdx <= 6) {
+                    window.currentAdminLessons = JSON.parse(JSON.stringify(scheduleData[dIdx - 1].lessons));
+                } else {
+                    window.currentAdminLessons = [];
+                }
+            } catch (e) {
+                window.currentAdminLessons = [];
+            }
+        }
+    }
+    window.refreshAdminLessonRows();
+};
+
+window.refreshAdminLessonRows = function() {
+    const list = document.getElementById('schedule-admin-list');
+    if (!list) return;
+
+    if (window.currentAdminLessons.length === 0) {
+        list.innerHTML = '<div style="color:#888; text-align:center; padding: 20px;">Нет пар. Нажмите «Добавить пару», чтобы начать.</div>';
+        return;
+    }
+
+    list.innerHTML = window.currentAdminLessons.map((l, i) => `
+        <div class="lesson-admin-row" style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 4px;">
+            <input type="text" placeholder="№" style="width: 30px;" value="${l.id || ''}" oninput="window.updateAdminRow(${i}, 'id', this.value)">
+            <input type="text" placeholder="Время" style="width: 90px;" value="${l.time || ''}" oninput="window.updateAdminRow(${i}, 'time', this.value)">
+            <input type="text" placeholder="Предмет" style="flex: 2; min-width: 120px;" value="${l.subject || ''}" oninput="window.updateAdminRow(${i}, 'subject', this.value)">
+            <input type="text" placeholder="Препод" style="flex: 1; min-width: 100px;" value="${l.teacher || ''}" oninput="window.updateAdminRow(${i}, 'teacher', this.value)">
+            <input type="text" placeholder="Каб" style="width: 50px;" value="${l.room || ''}" oninput="window.updateAdminRow(${i}, 'room', this.value)">
+            <select style="width: 100px;" onchange="window.updateAdminRow(${i}, 'week', this.value)">
+                <option value="both" ${l.week==='both'?'selected':''}>Обе</option>
+                <option value="num" ${l.week==='num'?'selected':''}>Числитель</option>
+                <option value="den" ${l.week==='den'?'selected':''}>Знаменатель</option>
+            </select>
+            <button class="btn btn-cancel" style="padding: 2px 8px;" onclick="window.removeScheduleAdminRow(${i})">✕</button>
+        </div>
+    `).join('');
+};
+
+window.updateAdminRow = function(idx, field, val) {
+    if (field === 'id') window.currentAdminLessons[idx][field] = parseInt(val) || 1;
+    else window.currentAdminLessons[idx][field] = val;
+};
+
+window.addScheduleAdminRow = function() {
+    const lastId = window.currentAdminLessons.length > 0 ? window.currentAdminLessons[window.currentAdminLessons.length-1].id : 0;
+    window.currentAdminLessons.push({ id: lastId + 1, time: '', subject: '', teacher: '', room: '', week: 'both' });
+    window.refreshAdminLessonRows();
+};
+
+window.removeScheduleAdminRow = function(idx) {
+    window.currentAdminLessons.splice(idx, 1);
+    window.refreshAdminLessonRows();
+};
+
+window.saveGlobalSchedule = async function () {
+    const token = document.getElementById('sa-token').value.trim();
+    const repoInput = document.getElementById('sa-repo').value.trim();
+    if (!token || !repoInput) { alert('Введите GitHub токен и репозиторий!'); return; }
+
+    const type = document.getElementById('sa-type').value;
+    
+    // Prepare data
+    let finalSchedule = JSON.parse(JSON.stringify(scheduleData));
+    let finalOverrides = JSON.parse(JSON.stringify(window.scheduleOverrides));
+
+    if (type === 'permanent') {
+        const dayIdx = parseInt(document.getElementById('sa-day-select').value);
+        finalSchedule[dayIdx].lessons = window.currentAdminLessons;
+    } else {
+        const dateKey = document.getElementById('sa-date-input').value.trim();
+        if (!dateKey) { alert('Введите дату!'); return; }
+        if (window.currentAdminLessons.length === 0) {
+            delete finalOverrides[dateKey];
+        } else {
+            finalOverrides[dateKey] = window.currentAdminLessons;
+        }
+    }
+
+    const content = JSON.stringify({ schedule: finalSchedule, overrides: finalOverrides }, null, 2);
+    const encoded = btoa(unescape(encodeURIComponent(content)));
+
+    try {
+        const getResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/globalSchedule.json`, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        let sha = '';
+        if (getResp.ok) {
+            const fileData = await getResp.json();
+            sha = fileData.sha;
+        }
+
+        const putResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/globalSchedule.json`, {
+            method: 'PUT',
+            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+            body: JSON.stringify({ message: 'Обновление расписания и замен', content: encoded, sha })
+        });
+
+        if (putResp.ok) {
+            scheduleData = finalSchedule;
+            window.scheduleOverrides = finalOverrides;
+            localStorage.setItem('npek_global_schedule', JSON.stringify(scheduleData));
+            localStorage.setItem('npek_global_overrides', JSON.stringify(window.scheduleOverrides));
+            localStorage.setItem('npek_gh_token', token);
+            localStorage.setItem('npek_gh_repo', repoInput);
+            alert('✅ Расписание успешно обновлено в GitHub!');
+            window.closeScheduleAdminPanel();
+            renderSchedule();
+        } else {
+            const err = await putResp.json();
+            alert('Ошибка GitHub API: ' + (err.message || putResp.status));
+        }
+    } catch (e) {
+        alert('Ошибка сети: ' + e.message);
+    }
+};
