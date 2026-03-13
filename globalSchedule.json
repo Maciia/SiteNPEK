@@ -28,11 +28,11 @@
           "week": "both"
         },
         {
-          "id": 4,
+          "id": 3,
           "time": "12:40 – 14:10",
-          "subject": "Ин. язык1",
+          "subject": "Ин. язык",
           "teacher": "Замира Шамсадинова",
-          "room": "44а",
+          "room": "45а",
           "week": "both",
           "isGroup": true,
           "secondTeacher": "Воронович",
