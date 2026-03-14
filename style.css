@@ -238,6 +238,7 @@ body {
     grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 10px;
     min-height: 0;
+    will-change: transform, opacity;
 }
 
 .top-bar {
@@ -909,6 +910,12 @@ body.theme-christmas-body {
         padding: 5px;
         padding-top: env(safe-area-inset-top, 15px);
         /* fixes Safari notch overlap */
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    body {
+        overflow: hidden;
     }
 
     /* Force Top Bar to stack */
@@ -953,24 +960,38 @@ body.theme-christmas-body {
         height: 100%;
     }
 
-    .day-card.mobile-active {
-        display: flex;
-        animation: fadeIn 0.18s ease;
-        /* Fill available space so lesson-list can scroll */
-        height: calc(100vh - 260px);
-        min-height: 300px;
+    @keyframes slideInRight {
+        from { transform: translateX(30px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
 
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateX(10px);
-        }
+    @keyframes slideInLeft {
+        from { transform: translateX(-30px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
 
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
+    @keyframes fadeInScale {
+        from { transform: scale(0.98); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .anim-slide-right {
+        animation: slideInRight 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    .anim-slide-left {
+        animation: slideInLeft 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    }
+
+    .anim-fade-scale {
+        animation: fadeInScale 0.4s ease-out forwards;
+    }
+
+    .day-card.mobile-active {
+        display: flex;
+        /* Animation applied dynamically via JS */
+        flex: 1;
+        min-height: 0;
     }
 
     .mobile-nav {

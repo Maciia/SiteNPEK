@@ -112,11 +112,24 @@ function splitTimeRange(rangeStr) {
     return [null, null];
 }
 
-function renderSchedule() {
+window.applyShrink = function(el) {
+    if (!el || el.clientWidth === 0) return;
+    el.style.fontSize = ''; // Reset to default
+    let size = parseFloat(window.getComputedStyle(el).fontSize);
+    while (el.scrollWidth > (el.clientWidth + 1) && size > 8) {
+        size -= 0.5;
+        el.style.fontSize = size + 'px';
+    }
+};
+
+function renderSchedule(animClass = 'anim-fade-scale') {
     const container = document.getElementById('schedule-grid');
     if (!container) return;
 
     container.innerHTML = '';
+    container.classList.remove('anim-fade-scale', 'anim-slide-right', 'anim-slide-left');
+    void container.offsetWidth; // Force reflow
+    container.classList.add(animClass);
 
     // Calculate dates for the week we are rendering
     const now = new Date();
@@ -263,20 +276,11 @@ function renderSchedule() {
         const subject = item.querySelector('.lesson-subject');
         const teacher = item.querySelector('.lesson-teacher');
 
-        const shrink = (el, max) => {
-            if (!el) return;
-            let size = parseFloat(window.getComputedStyle(el).fontSize);
-            while (el.scrollWidth > el.clientWidth && size > 8) {
-                size -= 0.5;
-                el.style.fontSize = size + 'px';
-            }
-        };
-
         // Slightly delay to ensure layout is ready
         setTimeout(() => {
-            shrink(subject);
-            shrink(teacher);
-        }, 10);
+            window.applyShrink(subject);
+            window.applyShrink(teacher);
+        }, 50);
     });
 }
 
@@ -907,14 +911,24 @@ function switchMobileDay(dir) {
     const newIdx = mobileDayIndex + dir;
     if (newIdx >= 0 && newIdx < scheduleData.length) {
         mobileDayIndex = newIdx;
+        const animClass = dir > 0 ? 'anim-slide-right' : 'anim-slide-left';
+        
         document.querySelectorAll('.day-card').forEach(card => {
-            card.classList.remove('mobile-active');
-            if (parseInt(card.dataset.idx) === mobileDayIndex) card.classList.add('mobile-active');
+            card.classList.remove('mobile-active', 'anim-slide-right', 'anim-slide-left');
+            if (parseInt(card.dataset.idx) === mobileDayIndex) {
+                card.classList.add('mobile-active', animClass);
+            }
         });
         const navLabel = document.getElementById('current-day-label');
         if (navLabel && scheduleData[mobileDayIndex]) {
             navLabel.textContent = scheduleData[mobileDayIndex].day;
         }
+        // Apply shrink to newly visible items
+        setTimeout(() => {
+            document.querySelectorAll('.day-card.mobile-active .lesson-subject, .day-card.mobile-active .lesson-teacher').forEach(el => {
+                window.applyShrink(el);
+            });
+        }, 200);
     }
 }
 
@@ -923,14 +937,17 @@ window.changeWeek = function (offset) {
     weekOffset += offset;
     // Remove holiday body classes before rendering
     document.body.className = '';
-    renderSchedule();
+    const anim = offset > 0 ? 'anim-slide-right' : 'anim-slide-left';
+    renderSchedule(anim);
     updateState();
 }
 
 window.resetWeek = function () {
+    const oldOffset = weekOffset;
     weekOffset = 0;
     document.body.className = '';
-    renderSchedule();
+    const anim = oldOffset < 0 ? 'anim-slide-right' : (oldOffset > 0 ? 'anim-slide-left' : 'anim-fade-scale');
+    renderSchedule(anim);
     updateState();
 }
 
@@ -1146,8 +1163,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <!-- Project Info Footer -->
             <div style="margin: 20px auto; max-width: 600px; padding: 0 15px; color: #666; font-size: 0.8rem; text-align: center; line-height: 1.4;">
-                <p>🚀 <b>Что нового:</b> поддержка числителя/знаменателя, замен на один день и разделения групп (разделитель //). Под капотом — скрытая админ-панель для контроля контента.</p>
-                <p style="margin-top: 6px; opacity: 0.7;">Используется в личных и групповых целях. Копирование не запрещается, но не наглейте.</p>
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalsHtml);
@@ -1271,6 +1286,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     t.textContent = (window.currentGroupMember === 1) ? el.dataset.t1 : el.dataset.t2;
                     r.textContent = (window.currentGroupMember === 1) ? el.dataset.r1 : el.dataset.r2;
+                    
+                    // Re-apply shrink after text change
+                    window.applyShrink(t);
+                    
                     t.style.opacity = 1; r.style.opacity = 1;
                 }, 500);
             }
