@@ -200,10 +200,16 @@ function renderSchedule(animClass = 'anim-fade-scale') {
     const container = document.getElementById('schedule-grid');
     if (!container) return;
 
+    // Fix mobile jumping: keep previous height during re-render
+    const prevHeight = container.offsetHeight;
+    if (prevHeight > 0) container.style.minHeight = prevHeight + 'px';
+
     container.innerHTML = '';
     container.classList.remove('anim-fade-scale', 'anim-slide-right', 'anim-slide-left');
     void container.offsetWidth; // Force reflow
     container.classList.add(animClass);
+
+    setTimeout(() => { container.style.minHeight = ''; }, 500); // Reset after anim
 
     // Calculate dates for the week we are rendering
     const now = new Date();
@@ -1786,6 +1792,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.syncNow = async function() {
         const btn = event.target;
+        if (btn.disabled) return;
         const oldText = btn.innerText;
         btn.innerText = "⏳ Проверка...";
         btn.disabled = true;
@@ -1794,19 +1801,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Anti-spam check
             const isSpam = await window.checkAntiSpam();
             if (isSpam) {
-                const choice = confirm("⚠️ Внимание! Замечена подозрительная активность для вашего индекса со всех устройств.\n\nПродолжить синхронизацию?");
+                const choice = confirm("⚠️ Внимание! Замечена подозрительная активность.\n\nПродолжить?");
                 if (!choice) {
                     localStorage.setItem('npek_auto_sync', 'false');
-                    const check = document.getElementById('auto-sync-check');
-                    if(check) check.checked = false;
-                    alert("Авто-синхронизация выключена.");
+                    if(document.getElementById('auto-sync-check')) 
+                        document.getElementById('auto-sync-check').checked = false;
                     return;
                 } else {
-                    window.spamApprovedSession = true; // Don't ask again this session
+                    window.spamApprovedSession = true;
                 }
             }
 
-            btn.innerText = "⏳ Синхронизация...";
+            btn.innerText = "⏳ Синхрон...";
             await initUserID(); 
             window.addActionLog("Синхронизация выполнена");
             alert("Данные успешно синхронизированы!");

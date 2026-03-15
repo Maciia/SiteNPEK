@@ -613,25 +613,29 @@ body {
     background: var(--modal-bg);
     border: 1px solid var(--card-border);
     border-radius: 12px;
-    width: 90%;
-    max-width: 400px;
+    width: 95%;
+    max-width: 420px;
     padding: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     transform: translateY(20px);
     transition: transform 0.2s;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
-.modal-overlay.active .modal-box {
-    transform: translateY(0);
+@media (max-width: 600px) {
+    .modal-box {
+        padding: 15px;
+        width: 98%;
+    }
+    .modal-title {
+        font-size: 1.1rem;
+    }
+    .btn {
+        padding: 12px 8px; /* Bigger touch target */
+    }
 }
 
-.modal-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin-bottom: 16px;
-    color: #fff;
-    text-align: center;
-}
 
 .form-group {
     margin-bottom: 15px;
