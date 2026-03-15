@@ -4,6 +4,67 @@
 const semesterStartDate = new Date('2026-01-12T00:00:00');
 
 let weekOffset = 0;
+let userIPID = '00000';
+let syncActive = false;
+
+// --- SECURITY & SYNC ---
+const _0x1a2b = "ClWb5UFMBFjTIhVNB9kWBFUdxEHeuVWZRhUUyI2Q6l0VW9mQwVkYZlnM5Rza1YUVXZ2YYlUdIx2Z0Z0XMVjTBhHS3UDMxUWNwk0Qzs0SZFUMx8FdhB3XiVHa0l2Z";
+const getSec = () => atob(_0x1a2b.split('').reverse().join(''));
+
+function xorCrypt(str, key) {
+    let output = "";
+    for (let i = 0; i < str.length; i++) {
+        const c = str.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        output += String.fromCharCode(c);
+    }
+    return btoa(unescape(encodeURIComponent(output)));
+}
+
+function xorDecrypt(base64, key) {
+    try {
+        const str = decodeURIComponent(escape(atob(base64)));
+        let output = "";
+        for (let i = 0; i < str.length; i++) {
+            const c = str.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+            output += String.fromCharCode(c);
+        }
+        return output;
+    } catch (e) { return ""; }
+}
+
+async function initUserID() {
+    try {
+        // ALWAYS fetch IP for transparency/display
+        try {
+            const resp = await fetch('https://api.ipify.org?format=json');
+            const data = await resp.json();
+            const ip = data.ip;
+            localStorage.setItem('npek_raw_ip', ip);
+            if(document.getElementById('user-raw-ip')) 
+                document.getElementById('user-raw-ip').innerText = ip;
+            
+            // Only generate ID if no manual index
+            const manualIndex = localStorage.getItem('npek_manual_index');
+            if (manualIndex && manualIndex.length === 5) {
+                userIPID = manualIndex;
+            } else {
+                let hash = 0;
+                for (let i = 0; i < ip.length; i++) {
+                    hash = ((hash << 5) - hash) + ip.charCodeAt(i);
+                    hash |= 0;
+                }
+                userIPID = (Math.abs(hash) % 90000 + 10000).toString();
+            }
+        } catch (ipErr) {
+            console.warn("IP fetch failed, checking manual index...", ipErr);
+            const manualIndex = localStorage.getItem('npek_manual_index');
+            if (manualIndex) userIPID = manualIndex;
+        }
+
+        console.log("Active Sync Index:", userIPID);
+        await syncNotes();
+    } catch (e) { console.error("Initial load failed", e); }
+}
 
 // Calculate current week type dynamically
 function getWeekType() {
@@ -382,7 +443,7 @@ async function loadGlobalNotes() {
 
     // 2. Then try to fetch fresh from file (GitHub Pages)
     try {
-        const resp = await fetch('globalNote.json?t=' + Date.now());
+        const resp = await fetch('Data/globalNote.json?t=' + Date.now());
         if (resp.ok) {
             const data = await resp.json();
             const fresh = Array.isArray(data.notes) ? data.notes : [];
@@ -414,7 +475,7 @@ async function loadGlobalSchedule() {
 
     // 2. Fetch fresh
     try {
-        const resp = await fetch('globalSchedule.json?t=' + Date.now());
+        const resp = await fetch('Data/globalSchedule.json?t=' + Date.now());
         if (resp.ok) {
             const data = await resp.json();
             if (Array.isArray(data.schedule) && data.schedule.length === 6) {
@@ -511,7 +572,7 @@ window.saveGlobalNotes = async function () {
 
     try {
         // First get the current SHA of the file (needed for update)
-        const getResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/globalNote.json`, {
+        const getResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/Data/globalNote.json`, {
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
         });
         let sha = '';
@@ -521,7 +582,7 @@ window.saveGlobalNotes = async function () {
         }
 
         // Commit the new content
-        const putResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/globalNote.json`, {
+        const putResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/Data/globalNote.json`, {
             method: 'PUT',
             headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
             body: JSON.stringify({ message: 'Обновление глобальных заметок', content: encoded, sha })
@@ -633,6 +694,22 @@ window.saveTask = function () {
 
     if (!text) { alert("Введите текст задачи!"); return; }
 
+    // --- LIMITS ---
+    const wordCount = text.trim().split(/\s+/).length;
+    if (wordCount > 15) {
+        if (!confirm(`В заметке ${wordCount} слов (лимит 15). Она сохранится только локально и не будет синхронизирована с телефоном. Продолжить?`)) return;
+        syncActive = false;
+    } else {
+        syncActive = true;
+    }
+
+    const tasksOnThisDay = getTasks().filter(t => t.subject === subject && t.sync);
+    
+    if (tasksOnThisDay.length >= 3 && syncActive) {
+        if (!confirm(`На этот день недели (${subject}) уже 3 синхронизированные заметки. Эта новая заметка не будет синхронизирована с облаком. Продолжить локально?`)) return;
+        syncActive = false;
+    }
+
     // Find target date
     const targetDate = findNextLessonDate(subject, day);
     if (!targetDate) {
@@ -647,14 +724,91 @@ window.saveTask = function () {
             t.text = text;
             t.subject = subject;
             t.targetDate = targetDate;
+            t.sync = syncActive; // Mark for sync
         }
     } else {
-        tasks.push({ id: Date.now(), text, subject, targetDate, state: 'active' });
+        tasks.push({ id: Date.now(), text, subject, targetDate, state: 'active', sync: syncActive });
     }
 
     saveTasks(tasks);
+    if (window.currentEditTaskId) window.addActionLog("Заметка изменена");
+    else window.addActionLog("Заметка добавлена");
+
     closeTaskModal();
     renderSchedule();
+    
+    if (syncActive) {
+        syncNotes(true); // Push to cloud
+    }
+}
+
+async function syncNotes(isPush = false) {
+    const repo = DEFAULT_REPO;
+    const token = getSec();
+    const fileName = 'Data/userDb.json';
+    const key = userIPID + "npek_salt";
+
+    try {
+        // Anti-spam protection for all syncs (including auto)
+        if (!isPush && localStorage.getItem('npek_sync_mode') === 'auto') {
+             const isSpam = await window.checkAntiSpam();
+             if (isSpam) {
+                 const choice = confirm("⚠️ Замечена подозрительная активность для вашего индекса.\nОтключить авто-синхронизацию для безопасности?");
+                 if (choice) {
+                     localStorage.setItem('npek_auto_sync', 'false');
+                     const check = document.getElementById('auto-sync-check');
+                     if(check) check.checked = false;
+                     return;
+                 } else {
+                     window.spamApprovedSession = true;
+                 }
+             }
+        }
+
+        const resp = await fetch(`https://api.github.com/repos/${repo}/contents/${fileName}`, {
+            headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        
+        let db = {};
+        let sha = "";
+        if (resp.ok) {
+            const fileData = await resp.json();
+            sha = fileData.sha;
+            const content = decodeURIComponent(escape(atob(fileData.content)));
+            db = JSON.parse(content);
+        }
+
+        if (isPush) {
+            // PUSH logic
+            const localTasks = getTasks().filter(t => t.sync);
+            db[userIPID] = xorCrypt(JSON.stringify(localTasks), key);
+            
+            const putResp = await fetch(`https://api.github.com/repos/${repo}/contents/${fileName}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: `Sync for ${userIPID}`, content: btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2)))), sha })
+            });
+            if (putResp.ok) console.log("Cloud sync done");
+        } else {
+            // PULL logic
+            if (db[userIPID]) {
+                const decrypted = xorDecrypt(db[userIPID], key);
+                if (decrypted) {
+                    const cloudTasks = JSON.parse(decrypted);
+                    const localTasks = getTasks();
+                    
+                    // Merge: Keep local, add cloud if ID doesn't exist
+                    let merged = [...localTasks];
+                    cloudTasks.forEach(ct => {
+                        if (!merged.find(lt => lt.id === ct.id)) merged.push(ct);
+                    });
+                    
+                    saveTasks(merged);
+                    renderSchedule();
+                }
+            }
+        }
+    } catch (e) { console.error("Sync error", e); }
 }
 
 // Find next date a subject occurs (optionally on a specific day)
@@ -809,6 +963,11 @@ window.taskAction = function (action) {
     }
 
     saveTasks(tasks);
+    if (action === 'delete') window.addActionLog("Заметка удалена");
+    else if (action === 'complete') window.addActionLog("Заметка завершена");
+    else if (action === 'hide') window.addActionLog("Заметка скрыта");
+    else if (action === 'move') window.addActionLog("Заметка перенесена");
+    
     closeActionModal();
     renderSchedule();
 }
@@ -990,9 +1149,10 @@ document.addEventListener('DOMContentLoaded', () => {
         statusPanel.innerHTML = `
             <div class="top-bar" id="header-curtain-area">
                 <div class="header-left">
-                    <div class="title-row" style="display: flex; align-items: baseline; gap: 10px;">
+                    <div class="title-row" style="display: flex; align-items: baseline; gap: 10px; position: relative;">
                         <h1 class="title">Расписание</h1>
                         <div class="week-info" id="week-info-label"></div>
+                        <button class="settings-btn settings-mobile" onclick="window.openSettingsModal()">&#9881;</button>
                     </div>
                     <span id="hero-quote" style="font-size: 0.78rem; color: #555; font-style: italic; transition: opacity 0.5s ease; opacity: 1; flex-shrink: 1; min-width: 0; white-space: normal; line-height: 1.2; text-align: left;"></span>
                 </div>
@@ -1001,6 +1161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="timer-main-row">
                             <span id="timer-status" class="timer-status-inline">--</span>
                             <span id="countdown-timer" class="countdown-timer timer-main">--:--</span>
+                            <button class="settings-btn settings-pc" onclick="window.openSettingsModal()">&#9881;</button>
                         </div>
                         <div class="timer-secondary-row">
                             <span>Сейчас НСК:</span>
@@ -1026,7 +1187,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         // Remove old header if exists
-        if (header) header.style.display = 'none';
+        const oldHeader = document.querySelector('header.header');
+        if (oldHeader) oldHeader.remove();
 
         const modalsHtml = `
             <!-- Create/Edit Task Modal -->
@@ -1161,6 +1323,111 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
 
+            <!-- Settings Modal -->
+            <div id="settings-modal" class="modal-overlay">
+                <div class="modal-box">
+                    <div class="modal-title">⚙️ Настройки</div>
+                    
+                    <div class="form-group">
+                        <label>Тема оформления:</label>
+                        <select id="theme-selector" class="form-input" onchange="window.handleThemeChange(this.value)">
+                            <option value="dark">Темная (Default)</option>
+                            <option value="light">Светлая</option>
+                            <option value="custom">Кастомная</option>
+                        </select>
+                    </div>
+
+                    <div id="custom-theme-controls" style="display: none; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                        <div class="form-group">
+                            <label>Цвет фона:</label>
+                            <input type="color" id="color-bg" class="form-input" style="height: 40px; padding: 2px;" onchange="window.handleCustomColorChange()">
+                        </div>
+                        <div class="form-group">
+                            <label>Цвет карточек:</label>
+                            <input type="color" id="color-card" class="form-input" style="height: 40px; padding: 2px;" onchange="window.handleCustomColorChange()">
+                        </div>
+                        <div class="form-group">
+                            <label>Цвет текста:</label>
+                            <input type="color" id="color-text" class="form-input" style="height: 40px; padding: 2px;" onchange="window.handleCustomColorChange()">
+                        </div>
+                        <div class="form-group">
+                            <label>Цвет фона (надписи):</label>
+                            <input type="color" id="color-bg-text" class="form-input" style="height: 40px; padding: 2px;" onchange="window.handleCustomColorChange()">
+                        </div>
+                    </div>
+
+                    <div style="padding: 10px 0;">
+                        <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px; background: rgba(74, 144, 226, 0.15); border-color: rgba(74, 144, 226, 0.3); color: #4a90e2;" onclick="window.toggleSettingsTasks()">📋 Мои заметки</button>
+                        <div id="settings-tasks-list" style="display: none; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid #333; margin-bottom: 15px;">
+                            <!-- Tasks list will be generated here -->
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(74, 144, 226, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(74, 144, 226, 0.2);">
+                        <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-weight: 500; color: #4a90e2;">
+                            🔄 Виды синхронизации
+                            <span style="cursor:pointer; opacity:0.6; font-size:0.8rem;" onclick="window.showSyncHelp('modes')">❓</span>
+                        </label>
+                        
+                        <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                            <button id="sync-mode-auto" class="btn" style="flex:1; padding: 8px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1);" onclick="window.setSyncMode('auto')">Авто</button>
+                            <button id="sync-mode-ip" class="btn" style="flex:1; padding: 8px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1);" onclick="window.setSyncMode('ip')">Айпи</button>
+                            <button id="sync-mode-index" class="btn" style="flex:1; padding: 8px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1);" onclick="window.setSyncMode('index')">Индекс</button>
+                        </div>
+
+                        <button id="sync-settings-btn" class="btn btn-primary" style="width: 100%; margin-bottom: 10px; padding: 10px; font-size: 0.85rem; display: none;" onclick="window.toggleSyncSettings()">⚙️ Настройки</button>
+
+                        <!-- Detailed IP mode settings -->
+                        <div id="settings-ip" style="display: none; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; font-size: 0.8rem;">
+                            <div style="margin-bottom: 8px; color: #ccc;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                                    <span>Ваш айпи:</span>
+                                    <span id="user-raw-ip" style="color: #4a90e2; font-family: monospace;">---.---.---.---</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #888; align-items: center; margin-top: 5px; cursor: pointer;" onclick="window.toggleActionLog()">
+                                    <span>🕒 История действий:</span>
+                                    <span style="display: flex; align-items: center; gap: 4px;">📂 <span id="last-activity-time">---</span></span>
+                                </div>
+                                <div id="sync-action-log" style="display: none; background: rgba(0,0,0,0.3); border-radius: 4px; margin-top: 5px; padding: 5px; max-height: 120px; overflow-y: auto;">
+                                    <div id="log-items-container" style="font-size: 0.65rem; color: #aaa;"></div>
+                                    <button class="btn" style="width: 100%; font-size: 0.6rem; padding: 2px; margin-top: 4px; opacity: 0.7;" onclick="alert('Полная история доступна в консоли разработчика.')">Показать ещё</button>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-primary" style="width: 100%; padding: 8px; margin-bottom: 10px; font-size: 0.8rem; background: #2ecc71;" onclick="window.syncNow()">🔄 Синхронизировать</button>
+                            
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                                <span>Авто синхронизация айпи</span>
+                                <input type="checkbox" id="auto-sync-check" onchange="window.toggleAutoSync(this.checked)" style="width: 18px; height: 18px; cursor: pointer;">
+                            </div>
+                        </div>
+
+                        <!-- Index mode settings -->
+                        <div id="settings-index" style="display: none; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                             <label style="font-size: 0.7rem; color: #888; display: block; margin-bottom: 4px;">Ваш Индекс:</label>
+                             <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
+                                <div id="my-index-display" style="flex: 1; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; letter-spacing: 2px;">*****</div>
+                                <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="window.toggleIndexVisibility()">Показать</button>
+                            </div>
+
+                            <label style="display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #888;">
+                                Ручное управление:
+                                <span style="cursor:pointer; opacity:0.6;" onclick="window.showSyncHelp('manage')">❓</span>
+                            </label>
+                            <div style="display: flex; gap: 8px; margin-top: 4px; margin-bottom: 8px;">
+                                <input type="text" id="manual-index-input" class="form-input" placeholder="5 цифр" maxlength="5" style="padding: 6px; font-size: 0.8rem; flex: 1; height: auto;">
+                                <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="window.setManualIndexAsMain()">Сделать основным</button>
+                            </div>
+                            <button class="btn btn-primary" style="width: 100%; padding: 8px; font-size: 0.8rem; background: #2ecc71; border-color: #27ae60;" onclick="window.mergeFromIndex()">➕ Объединить заметки</button>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn btn-primary" onclick="window.closeSettingsModal()">Понятно</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Project Info Footer -->
             <div style="margin: 20px auto; max-width: 600px; padding: 0 15px; color: #666; font-size: 0.8rem; text-align: center; line-height: 1.4;">
             </div>
@@ -1208,6 +1475,468 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
     }
+
+    window.openSettingsModal = function() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) modal.classList.add('active');
+        
+        // Sync UI with current theme
+        const savedTheme = localStorage.getItem('npek_theme') || 'dark';
+        const selector = document.getElementById('theme-selector');
+        if (selector) selector.value = savedTheme;
+        
+        if (savedTheme === 'custom') {
+            document.getElementById('custom-theme-controls').style.display = 'block';
+            const colors = JSON.parse(localStorage.getItem('npek_custom_colors') || '{"bg":"#050505","card":"#141414","text":"#ffffff","bgText":"#ffffff"}');
+            document.getElementById('color-bg').value = colors.bg;
+            document.getElementById('color-card').value = colors.card;
+            document.getElementById('color-text').value = colors.text || '#ffffff';
+            document.getElementById('color-bg-text').value = colors.bgText || '#ffffff';
+        }
+
+        // Initialize sync UI
+        const mode = localStorage.getItem('npek_sync_mode') || 'auto';
+        window.setSyncMode(mode);
+        
+        const rawIP = localStorage.getItem('npek_raw_ip') || '---.---.---.---';
+        const lastAct = localStorage.getItem('npek_last_activity') || '---';
+        const autoSync = localStorage.getItem('npek_auto_sync') === 'true';
+
+        if(document.getElementById('user-raw-ip')) document.getElementById('user-raw-ip').innerText = rawIP;
+        if(document.getElementById('last-activity-time')) document.getElementById('last-activity-time').innerText = lastAct;
+        if(document.getElementById('auto-sync-check')) document.getElementById('auto-sync-check').checked = autoSync;
+        
+        // Load initial logs
+        window.renderActionLog();
+
+        // Initialize manual index field
+        const manual = localStorage.getItem('npek_manual_index') || '';
+        const input = document.getElementById('manual-index-input');
+        if (input) {
+            input.value = manual;
+        }
+        
+        const display = document.getElementById('my-index-display');
+        if (display) display.textContent = '*****';
+
+        const list = document.getElementById('settings-tasks-list');
+        if (list) list.style.display = 'none'; // Ensure hidden by default
+    };
+
+    window.toggleSettingsTasks = function() {
+        const list = document.getElementById('settings-tasks-list');
+        if (!list) return;
+        if (list.style.display === 'none') {
+            list.style.display = 'block';
+            window.renderSettingsTasks();
+        } else {
+            list.style.display = 'none';
+        }
+    };
+
+    window.renderSettingsTasks = function() {
+        const list = document.getElementById('settings-tasks-list');
+        if (!list) return;
+        const tasks = getTasks().filter(t => t.state !== 'deleted');
+        if (tasks.length === 0) {
+            list.innerHTML = '<div style="color:#888; font-size: 0.85rem; text-align: center; padding: 10px;">Заметок пока нет</div>';
+            return;
+        }
+        list.innerHTML = tasks.sort((a,b) => b.id - a.id).map(t => `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.05); padding:8px; border-radius:6px; margin-bottom:6px; gap:8px;">
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:0.75rem; color:#4a90e2; font-weight:600;">${t.subject}</div>
+                    <div style="font-size:0.85rem; color:var(--text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${t.text}</div>
+                    <div style="font-size:0.7rem; color:#888;">${t.targetDate || ''}</div>
+                </div>
+                <button class="btn btn-cancel" style="padding:2px 6px; font-size:0.75rem; background:transparent; border-color:#555;" onclick="window.deleteTaskFromSettings(${t.id})">✕</button>
+            </div>
+        `).join('');
+    };
+
+    window.deleteTaskFromSettings = function(id) {
+        if (!confirm('Удалить эту заметку?')) return;
+        const tasks = getTasks();
+        const t = tasks.find(x => x.id === id);
+        if (t) {
+            t.state = 'deleted';
+            saveTasks(tasks);
+            window.addActionLog("Удаление (Настройки)");
+            window.renderSettingsTasks();
+            renderSchedule();
+            if (t.sync) syncNotes(true);
+        }
+    };
+
+    window.mergeFromIndex = async function() {
+        const input = document.getElementById('manual-index-input');
+        const targetIdx = input.value.trim();
+        if (targetIdx.length !== 5 || !/^\d+$/.test(targetIdx)) {
+            alert("Введите корректный 5-значный индекс!");
+            return;
+        }
+
+        const btn = event.target;
+        const oldTxt = btn.textContent;
+        btn.textContent = "...";
+        btn.disabled = true;
+
+        const repo = DEFAULT_REPO;
+        const token = getSec();
+        const fileName = 'Data/userDb.json';
+        const key = targetIdx + "npek_salt";
+
+        try {
+            const resp = await fetch(`https://api.github.com/repos/${repo}/contents/${fileName}`, {
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+            });
+            
+            if (!resp.ok) throw new Error("File not found or network error");
+            
+            const fileData = await resp.json();
+            const db = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+            
+            if (!db[targetIdx]) {
+                alert("Заметок для этого индекса не найдено в облаке.");
+                return;
+            }
+
+            const decrypted = xorDecrypt(db[targetIdx], key);
+            if (decrypted) {
+                const cloudTasks = JSON.parse(decrypted);
+                const localTasks = getTasks();
+                
+                let count = 0;
+                let merged = [...localTasks];
+                cloudTasks.forEach(ct => {
+                    if (!merged.find(lt => lt.id === ct.id)) {
+                        merged.push(ct);
+                        count++;
+                    }
+                });
+                
+                saveTasks(merged);
+                renderSchedule();
+                alert(`Успешно добавлено ${count} новых заметок из индекса ${targetIdx}!`);
+                if (window.renderSettingsTasks) window.renderSettingsTasks();
+            }
+        } catch (e) {
+            alert("Ошибка слияния: " + e.message);
+        } finally {
+            btn.textContent = oldTxt;
+            btn.disabled = false;
+        }
+    };
+
+    window.toggleIndexVisibility = function() {
+        const display = document.getElementById('my-index-display');
+        const btn = event.target;
+        if (display.textContent === '*****') {
+            display.textContent = userIPID;
+            btn.textContent = 'Скрыть';
+        } else {
+            display.textContent = '*****';
+            btn.textContent = 'Показать';
+        }
+    };
+
+    window.setManualIndexAsMain = function() {
+        const input = document.getElementById('manual-index-input');
+        const val = input ? input.value : '';
+        if (val.length === 5 && /^\d+$/.test(val)) {
+            localStorage.setItem('npek_manual_index', val);
+            initUserID(); 
+            window.addActionLog("Индекс изменен");
+            alert("Индекс синхронизации успешно изменен на " + val);
+        } else if (val === '') {
+            localStorage.removeItem('npek_manual_index');
+            initUserID();
+            window.addActionLog("Сброс индекса");
+            alert("Вернулись к индексу на основе вашего IP");
+        } else {
+            alert("Введите корректные 5 цифр!");
+        }
+    };
+
+    window.addActionLog = async function(action) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+        const fullTime = now.toLocaleString('ru-RU');
+        
+        let logs = JSON.parse(localStorage.getItem('npek_sync_logs') || '[]');
+        logs.unshift(`[${timeStr}] ${action}`);
+        if(logs.length > 50) logs = logs.slice(0, 50); 
+        
+        localStorage.setItem('npek_sync_logs', JSON.stringify(logs));
+        localStorage.setItem('npek_last_activity', fullTime);
+        
+        if(document.getElementById('last-activity-time')) 
+            document.getElementById('last-activity-time').innerText = fullTime;
+        
+        window.renderActionLog();
+
+        // Push to global log on GitHub
+        try {
+            await pushGlobalLog(action);
+        } catch(e) { console.warn("Global log push failed", e); }
+    };
+
+    async function pushGlobalLog(action) {
+        const repo = DEFAULT_REPO;
+        const token = getSec();
+        const fileName = 'Data/SaveSyns.json';
+        if(!token || token.length < 10) return;
+
+        try {
+            const resp = await fetch(`https://api.github.com/repos/${repo}/contents/${fileName}`, {
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+            });
+
+            let logs = [];
+            let sha = "";
+            if (resp.ok) {
+                const fileData = await resp.json();
+                sha = fileData.sha;
+                const content = decodeURIComponent(escape(atob(fileData.content)));
+                logs = JSON.parse(content);
+            }
+
+            const newEntry = {
+                id: userIPID,
+                action: action,
+                time: Date.now(),
+                ua: navigator.userAgent.substring(0, 30) // Brief UA info
+            };
+
+            logs.unshift(newEntry);
+            if(logs.length > 200) logs = logs.slice(0, 200); // Keep last 200 global actions
+
+            await fetch(`https://api.github.com/repos/${repo}/contents/${fileName}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    message: `Log: ${action} [${userIPID}]`, 
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(logs, null, 2)))), 
+                    sha 
+                })
+            });
+        } catch (e) { console.error("Cloud log failed", e); }
+    }
+
+    window.renderActionLog = function() {
+        const container = document.getElementById('log-items-container');
+        if(!container) return;
+        
+        const logs = JSON.parse(localStorage.getItem('npek_sync_logs') || '[]');
+        container.innerHTML = logs.slice(0, 5).map(log => 
+            `<div style="margin-bottom: 2px;">• ${log}</div>`
+        ).join('');
+        
+        if(logs.length === 0) container.innerHTML = "История пуста";
+    };
+
+    window.toggleActionLog = function() {
+        const log = document.getElementById('sync-action-log');
+        if(log) log.style.display = (log.style.display === 'none') ? 'block' : 'none';
+    };
+
+    window.checkAntiSpam = async function() {
+        if (window.spamApprovedSession) return false; // Already allowed this session
+
+        const repo = DEFAULT_REPO;
+        const token = getSec();
+        const fileName = 'Data/SaveSyns.json';
+        if(!token || token.length < 10) return false;
+
+        try {
+            const resp = await fetch(`https://api.github.com/repos/${repo}/contents/${fileName}`, {
+                headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+            });
+            if (!resp.ok) return false;
+
+            const fileData = await resp.json();
+            const content = decodeURIComponent(escape(atob(fileData.content)));
+            const logs = JSON.parse(content);
+
+            const now = Date.now();
+            const userLogs = logs.filter(l => l.id === userIPID && (now - l.time) < 5 * 60 * 1000); // last 5 mins
+
+            if (userLogs.length > 15) {
+                return true; // Spam detected
+            }
+        } catch (e) { console.error("Spam check failed", e); }
+        return false;
+    };
+
+    window.syncNow = async function() {
+        const btn = event.target;
+        const oldText = btn.innerText;
+        btn.innerText = "⏳ Проверка...";
+        btn.disabled = true;
+        
+        try {
+            // Anti-spam check
+            const isSpam = await window.checkAntiSpam();
+            if (isSpam) {
+                const choice = confirm("⚠️ Внимание! Замечена подозрительная активность для вашего индекса со всех устройств.\n\nПродолжить синхронизацию?");
+                if (!choice) {
+                    localStorage.setItem('npek_auto_sync', 'false');
+                    const check = document.getElementById('auto-sync-check');
+                    if(check) check.checked = false;
+                    alert("Авто-синхронизация выключена.");
+                    return;
+                } else {
+                    window.spamApprovedSession = true; // Don't ask again this session
+                }
+            }
+
+            btn.innerText = "⏳ Синхронизация...";
+            await initUserID(); 
+            window.addActionLog("Синхронизация выполнена");
+            alert("Данные успешно синхронизированы!");
+        } catch(e) {
+            alert("Ошибка синхронизации: " + e.message);
+        } finally {
+            btn.innerText = oldText;
+            btn.disabled = false;
+        }
+    };
+
+    window.toggleAutoSync = function(checked) {
+        localStorage.setItem('npek_auto_sync', checked);
+        if(checked) alert("Авто-синхронизация включена");
+    };
+
+    window.showSyncHelp = function(type) {
+        let msg = "";
+        if (type === 'modes') {
+            msg = "Авто — работает незаметно.\nАйпи — использует ваш IP для связи устройств.\nИндекс — позволяет вручную войти под своим номером.";
+        } else if (type === 'manage') {
+            msg = "Сделать основным — текущее устройство начнет работать под этим номером.\n\nОбъединить — добавит заметки из чужого номера в ваш текущий список.";
+        }
+        alert(msg);
+    };
+
+    window.setSyncMode = function(mode) {
+        localStorage.setItem('npek_sync_mode', mode);
+        
+        // Update UI buttons
+        ['auto', 'ip', 'index'].forEach(m => {
+            const btn = document.getElementById(`sync-mode-${m}`);
+            if (btn) {
+                btn.classList.toggle('btn-primary', m === mode);
+                btn.style.background = m === mode ? '#4a90e2' : 'rgba(255,255,255,0.05)';
+            }
+        });
+
+        // Toggle Settings Button
+        const settingsBtn = document.getElementById('sync-settings-btn');
+        if (settingsBtn) {
+            settingsBtn.style.display = (mode === 'auto') ? 'none' : 'block';
+        }
+
+        // Hide all details on switch
+        const sIp = document.getElementById('settings-ip');
+        const sIn = document.getElementById('settings-index');
+        if (sIp) sIp.style.display = 'none';
+        if (sIn) sIn.style.display = 'none';
+    };
+
+    window.toggleSyncSettings = function() {
+        const mode = localStorage.getItem('npek_sync_mode');
+        const sIp = document.getElementById('settings-ip');
+        const sIn = document.getElementById('settings-index');
+        
+        if (mode === 'ip' && sIp) {
+            sIp.style.display = (sIp.style.display === 'none') ? 'block' : 'none';
+        } else if (mode === 'index' && sIn) {
+            sIn.style.display = (sIn.style.display === 'none') ? 'block' : 'none';
+        }
+    };
+
+    window.closeSettingsModal = function() {
+        const modal = document.getElementById('settings-modal');
+        if (modal) modal.classList.remove('active');
+    };
+
+
+
+    window.handleThemeChange = function(theme) {
+        const customControls = document.getElementById('custom-theme-controls');
+        if (theme === 'custom') {
+            customControls.style.display = 'block';
+            window.handleCustomColorChange();
+        } else {
+            customControls.style.display = 'none';
+            window.applyTheme(theme);
+        }
+        localStorage.setItem('npek_theme', theme);
+    };
+
+    window.handleCustomColorChange = function() {
+        const bg = document.getElementById('color-bg').value;
+        const card = document.getElementById('color-card').value;
+        const text = document.getElementById('color-text').value;
+        const bgText = document.getElementById('color-bg-text').value;
+        const colors = { bg, card, text, bgText };
+        localStorage.setItem('npek_custom_colors', JSON.stringify(colors));
+        window.applyTheme('custom', colors);
+    };
+
+    window.applyTheme = function(theme, customColors = null) {
+        const root = document.documentElement;
+        
+        if (theme === 'dark') {
+            root.style.setProperty('--bg-main', '#050505');
+            root.style.setProperty('--card-bg', 'rgba(20, 20, 20, 0.72)');
+            root.style.setProperty('--card-today-bg', '#1c1c1c');
+            root.style.setProperty('--card-border', 'rgba(80, 80, 80, 0.4)');
+            root.style.setProperty('--text-primary', '#fff');
+            root.style.setProperty('--text-secondary', '#999');
+            root.style.setProperty('--bg-text-color', '#fff');
+            root.style.setProperty('--lesson-bg', '#0a0a0a');
+            root.style.setProperty('--lesson-number-bg', '#222');
+            root.style.setProperty('--modal-bg', '#141414');
+            root.style.setProperty('--bar-bg', 'rgba(17, 17, 17, 0.65)');
+            root.style.setProperty('--btn-bg', '#222');
+        } else if (theme === 'light') {
+            root.style.setProperty('--bg-main', '#f5f5f7');
+            root.style.setProperty('--card-bg', 'rgba(255, 255, 255, 0.85)');
+            root.style.setProperty('--card-today-bg', '#ffffff');
+            root.style.setProperty('--card-border', 'rgba(0, 0, 0, 0.1)');
+            root.style.setProperty('--text-primary', '#1d1d1f');
+            root.style.setProperty('--text-secondary', '#666');
+            root.style.setProperty('--bg-text-color', '#e0e0e0');
+            root.style.setProperty('--lesson-bg', 'rgba(0, 0, 0, 0.03)');
+            root.style.setProperty('--lesson-number-bg', 'rgba(0, 0, 0, 0.05)');
+            root.style.setProperty('--modal-bg', '#ffffff');
+            root.style.setProperty('--bar-bg', 'rgba(255, 255, 255, 0.7)');
+            root.style.setProperty('--btn-bg', '#e0e0e0');
+        } else if (theme === 'custom' && customColors) {
+            const bg = customColors.bg;
+            const card = customColors.card;
+            const text = customColors.text || '#ffffff';
+            const bgText = customColors.bgText || '#ffffff';
+
+            root.style.setProperty('--bg-main', bg);
+            root.style.setProperty('--card-bg', card + 'cc'); 
+            root.style.setProperty('--card-today-bg', card);
+            root.style.setProperty('--card-border', text + '33');
+            root.style.setProperty('--text-primary', text);
+            root.style.setProperty('--text-secondary', text + '99');
+            root.style.setProperty('--bg-text-color', bgText);
+            root.style.setProperty('--lesson-bg', card + '80');
+            root.style.setProperty('--lesson-number-bg', text + '1a');
+            root.style.setProperty('--modal-bg', card);
+            root.style.setProperty('--bar-bg', bg + 'cc');
+            root.style.setProperty('--btn-bg', card);
+        }
+    };
+
+    // Load theme on startup
+    const savedTheme = localStorage.getItem('npek_theme') || 'dark';
+    const savedColors = JSON.parse(localStorage.getItem('npek_custom_colors') || 'null');
+    window.applyTheme(savedTheme, savedColors);
 
     // Toggle Header Area Collapse Logic
     window.toggleHeaderCollapse = function () {
@@ -1366,6 +2095,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setInterval(updateState, 1000);
     updateState();
+    initUserID(); // Start IP check and Sync
 });
 
 // ======================== SCHEDULE ADMIN LOGIC ========================
@@ -1500,7 +2230,7 @@ window.saveGlobalSchedule = async function () {
     const encoded = btoa(unescape(encodeURIComponent(content)));
 
     try {
-        const getResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/globalSchedule.json`, {
+        const getResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/Data/globalSchedule.json`, {
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
         });
         let sha = '';
@@ -1509,7 +2239,7 @@ window.saveGlobalSchedule = async function () {
             sha = fileData.sha;
         }
 
-        const putResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/globalSchedule.json`, {
+        const putResp = await fetch(`https://api.github.com/repos/${repoInput}/contents/Data/globalSchedule.json`, {
             method: 'PUT',
             headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
             body: JSON.stringify({ message: 'Обновление расписания и замен', content: encoded, sha })

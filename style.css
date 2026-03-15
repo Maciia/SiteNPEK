@@ -1,9 +1,11 @@
 :root {
-    --bg-dark: #050505;
+    --bg-main: #050505;
     --card-bg: rgba(20, 20, 20, 0.72);
     --card-border: rgba(80, 80, 80, 0.4);
     --text-primary: #fff;
     --text-secondary: #999;
+    --bg-text-color: #fff;
+    --accent-color: #ffd700;
 }
 
 * {
@@ -12,6 +14,7 @@
     box-sizing: border-box;
     scrollbar-width: thin;
     scrollbar-color: rgba(100, 100, 100, 0.4) transparent;
+    transition: background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s ease, box-shadow 0.5s ease;
 }
 
 /* Chrome/Safari Scrollbar */
@@ -32,7 +35,7 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background-color: var(--bg-dark);
+    background-color: var(--bg-main);
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: hidden;
@@ -80,14 +83,14 @@ body {
 .timer-status-inline {
     font-size: 0.9rem !important;
     font-weight: 700 !important;
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 #countdown-timer.timer-main {
     font-size: 1.6rem !important;
     font-weight: 800 !important;
     line-height: 1 !important;
-    color: #fff !important;
+    color: var(--text-primary) !important;
 }
 
 .timer-secondary-row {
@@ -106,15 +109,76 @@ body {
     font-family: inherit !important;
 }
 
+/* Settings Button */
+.settings-btn {
+    background: var(--btn-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border-radius: 6px;
+    line-height: 1;
+}
+
+.settings-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background: var(--card-border);
+}
+
+.settings-pc {
+    display: inline-flex;
+    margin-left: 4px;
+}
+
+.settings-mobile {
+    display: none;
+}
+
+/* Settings Form Styles */
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    color: var(--text-secondary);
+}
+
+.form-input {
+    width: 100%;
+    padding: 10px;
+    background: var(--lesson-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    outline: none;
+    transition: all 0.2s;
+}
+
+.form-input:focus {
+    border-color: var(--text-secondary);
+    background: var(--lesson-number-bg);
+}
+
 
 .top-bar-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background: rgba(17, 17, 17, 0.65);
+    background: var(--bar-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(80, 80, 80, 0.3);
+    border: 1px solid var(--card-border);
     padding: 8px 16px;
     border-radius: 8px;
     margin-bottom: 25px;
@@ -164,9 +228,9 @@ body {
 }
 
 .week-btn {
-    background: #222;
-    color: #fff;
-    border: 1px solid #444;
+    background: var(--btn-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border);
     padding: 6px 12px;
     border-radius: 4px;
     cursor: pointer;
@@ -175,7 +239,7 @@ body {
 }
 
 .week-btn:hover {
-    background: #333;
+    background: var(--card-border);
 }
 
 .header-left {
@@ -197,7 +261,7 @@ body {
 .title {
     font-size: 1.2rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
     margin: 0;
     white-space: nowrap;
 }
@@ -210,8 +274,8 @@ body {
 
 .week-info {
     font-size: 0.9rem;
-    color: #aaa;
-    border: 1px solid #444;
+    color: var(--text-secondary);
+    border: 1px solid var(--card-border);
     padding: 2px 8px;
     border-radius: 4px;
     text-transform: uppercase;
@@ -278,10 +342,10 @@ body {
 }
 
 .collapse-toggle-top {
-    background: rgba(15, 15, 15, 0.9);
-    border: 1px solid rgba(80, 80, 80, 0.4);
+    background: var(--bar-bg);
+    border: 1px solid var(--card-border);
     border-top: none;
-    color: #fff; /* Changed from gold to white */
+    color: var(--text-primary);
     width: 46px; /* Slightly wider as requested */
     height: 16px;
     border-radius: 0 0 12px 12px;
@@ -316,8 +380,8 @@ body {
 }
 
 .day-card.today {
-    background: #1c1c1c;
-    border-color: #888;
+    background: var(--card-today-bg);
+    border-color: var(--accent-color);
 }
 
 .day-header {
@@ -338,12 +402,12 @@ body {
 .day-name {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .day-date {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--text-secondary);
 }
 
 .day-badge {
@@ -370,8 +434,8 @@ body {
 }
 
 .lesson-item {
-    background: #0a0a0a;
-    border: 1px solid #222;
+    background: var(--lesson-bg);
+    border: 1px solid var(--card-border);
     border-radius: 6px;
     padding: 8px 10px;
     display: flex;
@@ -383,8 +447,8 @@ body {
 .lesson-number {
     width: 24px;
     height: 24px;
-    background: #222;
-    color: #888;
+    background: var(--lesson-number-bg);
+    color: var(--text-secondary);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -402,7 +466,7 @@ body {
 .lesson-subject {
     font-size: 0.88rem;
     font-weight: 600;
-    color: #fff;
+    color: var(--text-primary);
     margin-bottom: 2px;
     word-break: break-word;
     /* Allows long text/names to break on PC too */
@@ -410,7 +474,7 @@ body {
 
 .lesson-details-compact {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--text-secondary);
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -418,13 +482,14 @@ body {
 }
 
 .lesson-teacher {
-    color: #aaa;
+    color: var(--text-secondary);
     font-size: 0.8rem;
     line-height: 1.1;
 }
 
 .lesson-room {
-    color: #555; /* Solid dark grey as requested */
+    color: var(--text-secondary);
+    opacity: 0.6;
     font-size: 0.72rem;
     line-height: 1.1;
     font-weight: 500;
@@ -437,23 +502,23 @@ body {
 .lesson-time-col {
     text-align: right;
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-secondary);
     flex-shrink: 0;
 }
 
 /* Active */
 .lesson-item.active-lesson {
-    background: #222;
-    border-color: #fff;
+    background: var(--lesson-number-bg);
+    border-color: var(--text-primary);
 }
 
 .lesson-item.active-lesson .lesson-number {
-    background: #fff;
-    color: #000;
+    background: var(--text-primary);
+    color: var(--bg-main);
 }
 
 .lesson-item.active-lesson .lesson-subject {
-    color: #fff;
+    color: var(--text-primary);
 }
 
 /* Inline Lesson Tasks */
@@ -545,8 +610,8 @@ body {
 }
 
 .modal-box {
-    background: #141414;
-    border: 1px solid #333;
+    background: var(--modal-bg);
+    border: 1px solid var(--card-border);
     border-radius: 12px;
     width: 90%;
     max-width: 400px;
@@ -818,26 +883,31 @@ body.theme-christmas-body {
     display: none;
     margin-top: 10px;
     padding: 10px;
-    background: #111;
+    background: var(--bar-bg);
+    border: 1px solid var(--card-border);
     border-radius: 8px;
     justify-content: space-between;
     align-items: center;
     flex-shrink: 0;
+    transition: all 0.5s ease;
 }
 
 .nav-btn {
-    background: #222;
-    color: #fff;
-    border: none;
+    background: var(--lesson-number-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border);
     width: 40px;
     height: 40px;
     border-radius: 6px;
     font-size: 1.2rem;
+    transition: background 0.5s ease, color 0.5s ease, border-color 0.5s ease;
 }
 
 .nav-label {
     font-weight: 700;
     font-size: 1.1rem;
+    color: var(--text-primary);
+    transition: color 0.5s ease;
 }
 
 /* --- Animated Text Background --- */
@@ -866,7 +936,7 @@ body.theme-christmas-body {
     /* Reduced for tighter density */
     font-weight: 900;
     text-transform: uppercase;
-    color: #fff;
+    color: var(--bg-text-color);
     /* We animate transformX continuously */
     will-change: transform;
 }
@@ -1078,13 +1148,14 @@ body.theme-christmas-body {
     }
 
     .lesson-details-compact .lesson-teacher {
-        color: #999;
+        color: var(--text-secondary);
         font-size: 0.78rem;
         line-height: 1.1;
     }
 
     .lesson-details-compact .lesson-room {
-        color: #555; /* Darker room on mobile too */
+        color: var(--text-secondary);
+        opacity: 0.6;
         font-size: 0.7rem;
         line-height: 1.1;
     }
@@ -1170,7 +1241,7 @@ body.theme-christmas-body {
             order: 1;
             white-space: normal !important;
             text-align: center !important;
-            color: #ccc !important;
+            color: var(--text-secondary) !important;
             line-height: 1.3;
             padding: 0 10px;
             margin: 4px 0 0 0 !important;
@@ -1178,14 +1249,14 @@ body.theme-christmas-body {
 
         /* --- GLASSMORPHISM on mobile (force re-apply for Safari) --- */
         .top-bar-container {
-            background: rgba(17, 17, 17, 0.7) !important;
+            background: var(--bar-bg) !important;
             -webkit-backdrop-filter: blur(12px) !important;
             backdrop-filter: blur(12px) !important;
             padding: 6px 10px !important;
         }
 
         .day-card {
-            background: rgba(10, 10, 10, 0.85) !important;
+            background: var(--card-bg) !important;
             -webkit-backdrop-filter: blur(15px) !important;
             backdrop-filter: blur(15px) !important;
         }
@@ -1227,6 +1298,32 @@ body.theme-christmas-body {
         .form-group[style*="flex"] {
             flex-direction: column !important;
             align-items: stretch !important;
+        }
+
+        /* Settings button positioning on mobile */
+        .settings-pc {
+            display: none !important;
+        }
+
+        .settings-mobile {
+            display: flex !important;
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+        }
+        
+        .settings-mobile:hover {
+            transform: translateY(-50%);
+        }
+
+        .title-row {
+            position: relative;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
     }
