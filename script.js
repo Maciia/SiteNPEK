@@ -20,6 +20,19 @@ function xorCrypt(str, key) {
     return btoa(unescape(encodeURIComponent(output)));
 }
 
+// Obfuscate user index for storage (prevents raw "open core" index in cloud)
+function getStorageID(index) {
+    if (!index) return 'u0';
+    let hash = 0;
+    const salt = "npek_salt_v2"; // Internal salt
+    const str = index + salt;
+    for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return 'u' + Math.abs(hash).toString(16);
+}
+
 function xorDecrypt(base64, key) {
     try {
         const str = decodeURIComponent(escape(atob(base64)));
@@ -747,6 +760,7 @@ async function syncNotes(isPush = false) {
     const token = getSec();
     const fileName = 'Data/userDb.json';
     const key = userIPID + "npek_salt";
+    const storageID = getStorageID(userIPID);
 
     try {
         // Anti-spam protection for all syncs (including auto)
@@ -781,18 +795,18 @@ async function syncNotes(isPush = false) {
         if (isPush) {
             // PUSH logic
             const localTasks = getTasks().filter(t => t.sync);
-            db[userIPID] = xorCrypt(JSON.stringify(localTasks), key);
+            db[storageID] = xorCrypt(JSON.stringify(localTasks), key);
             
             const putResp = await fetch(`https://api.github.com/repos/${repo}/contents/${fileName}`, {
                 method: 'PUT',
                 headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: `Sync for ${userIPID}`, content: btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2)))), sha })
+                body: JSON.stringify({ message: `Sync action`, content: btoa(unescape(encodeURIComponent(JSON.stringify(db, null, 2)))), sha })
             });
             if (putResp.ok) console.log("Cloud sync done");
         } else {
             // PULL logic
-            if (db[userIPID]) {
-                const decrypted = xorDecrypt(db[userIPID], key);
+            if (db[storageID]) {
+                const decrypted = xorDecrypt(db[storageID], key);
                 if (decrypted) {
                     const cloudTasks = JSON.parse(decrypted);
                     const localTasks = getTasks();
@@ -1595,13 +1609,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const fileData = await resp.json();
             const db = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+            const storageID = getStorageID(targetIdx);
             
-            if (!db[targetIdx]) {
+            if (!db[storageID]) {
                 alert("Заметок для этого индекса не найдено в облаке.");
                 return;
             }
 
-            const decrypted = xorDecrypt(db[targetIdx], key);
+            const decrypted = xorDecrypt(db[storageID], key);
             if (decrypted) {
                 const cloudTasks = JSON.parse(decrypted);
                 const localTasks = getTasks();
@@ -1702,7 +1717,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const newEntry = {
-                id: userIPID,
+                id: getStorageID(userIPID),
                 action: action,
                 time: Date.now(),
                 ua: navigator.userAgent.substring(0, 30) // Brief UA info
@@ -1715,7 +1730,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'PUT',
                 headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    message: `Log: ${action} [${userIPID}]`, 
+                    message: `Log entry`, 
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(logs, null, 2)))), 
                     sha 
                 })
@@ -1759,7 +1774,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const logs = JSON.parse(content);
 
             const now = Date.now();
-            const userLogs = logs.filter(l => l.id === userIPID && (now - l.time) < 5 * 60 * 1000); // last 5 mins
+            const storageID = getStorageID(userIPID);
+            const userLogs = logs.filter(l => l.id === storageID && (now - l.time) < 5 * 60 * 1000); // last 5 mins
 
             if (userLogs.length > 15) {
                 return true; // Spam detected
